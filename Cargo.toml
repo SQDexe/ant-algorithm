@@ -3,7 +3,7 @@ name = "ant-algorithm"
 version = "1.0.0"
 edition = "2021"
 authors = ["SQD.exe"]
-description = "A reimplementation of Generic Ant Algorithm"
+description = "A Rust reimplementation of Generic Ant Algorithm"
 
 [dependencies]
 clap = { version = "4.5.35", features = ["derive"] }
