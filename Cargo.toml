@@ -1,0 +1,13 @@
+[package]
+name = "ant-algorithm"
+version = "1.0.0"
+edition = "2021"
+authors = ["SQD.exe"]
+description = "A reimplementation of Generic Ant Algorithm"
+
+[dependencies]
+clap = { version = "4.5.35", features = ["derive"] }
+rand = "0.9.0"
+
+[build-dependencies]
+winresource = "0.1.20"

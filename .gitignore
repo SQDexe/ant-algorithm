@@ -1,0 +1,9 @@
+# Build
+/target
+
+# Git
+/.git
+/.vscode
+
+# Other
+/tmp
