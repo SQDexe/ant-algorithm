@@ -8,23 +8,28 @@ use {
 
 
 pub struct Ant {
-    pub world: Rc<RefCell<World>>,
-    pub position: char,
-    pub pheromone: f64,
-    pub satiated: bool,
-    pub route: String
+    world: Rc<RefCell<World>>,
+    position: char,
+    pheromone: f64,
+    satiated: bool,
+    route: String,
+	routes_counter: usize,
+	returns: bool
     }
 
 impl Ant {
 	/* moved from 'anthill.rs' */
-    pub fn new(world: Rc<RefCell<World>>, pheromone: f64) -> Self {
-		let position = world.borrow().anthill_name;
+    pub fn new(world: Rc<RefCell<World>>, pheromone: f64, returns: bool) -> Self {
+        let position = world.borrow()
+			.get_anthill();
         Ant {
             world,
             position,
             pheromone,
             satiated: false,
-            route: position.to_string()
+            route: position.to_string(),
+			routes_counter: 0,
+			returns
             }
         }
 
@@ -34,23 +39,19 @@ impl Ant {
 		
 	fn select_point(&self) -> usize {
 		let mut world = self.world.borrow_mut();
-        	
-		world.reset_auxils();		
-		world.calculate_distance(self.position);
-		world.sort_auxils();
+	
+		world.calculate_distance(self.position, &self.route);
 
 		let mut choice = world.get_index();
-		let mut is_wrong = self.check_route(world.auxils[choice].name);
-		let mut loop_prevention: usize = 0;
-		
-		while is_wrong {
-			choice = world.get_index();
-			is_wrong = self.check_route(world.auxils[choice].name);
+		// let mut loop_prevention: usize = 0;
 
-			loop_prevention += 1;
-			if 1024 <= loop_prevention {
-				panic!("Got stuck in while loop!");
-				}
+		while self.check_route(world.get_auxils()[choice].name) {
+			choice = world.get_index();
+
+			// loop_prevention += 1;
+			// if 1024 <= loop_prevention {
+			// 	panic!("Got stuck in while loop!");
+			// 	}
 			}
 		
 		choice
@@ -58,38 +59,49 @@ impl Ant {
 		
 	pub fn action(&mut self) {
 		let index = self.select_point();
-		let mut world = self.world.borrow_mut();
 
-		let (current_position, food) = (
-			world.auxils[index].name,
-			world.foodsource_name
-			);
+		let (current_position, food) = {
+			let world = self.world.borrow();
+			( world.get_auxils()[index].name, world.get_foodsource() )
+			};
 		
-		if current_position != food {
-			self.position = current_position;
-			self.route.push(self.position);
-			}
-		else {
+		self.position = current_position;
+		self.route.push(self.position);
+		
+		if current_position == food {
 			self.satiated = true;
-			self.position = food;
-			self.route.push(self.position);
-			world.cover_route(self.pheromone, &self.route);
+			self.world.borrow_mut()
+				.cover_route(self.pheromone, &self.route);
+
+			if self.returns {
+				self.satiated = false;
+				self.reset();
+				self.routes_counter += 1;
+				}
 			}
 		}
 
 	/* moved from 'anthill.rs' */
 	pub fn reset(&mut self) {
-		let home = self.world.borrow()
-			.anthill_name;
-		self.position = home;
-		self.route.push(home);
+		let anthill = self.world.borrow()
+			.get_anthill();
+		self.position = anthill;
+		self.route = anthill.to_string();
 		}
 
-	pub fn show(&self) {
-		println!("| {:>8} | {:>3} | {}",
-			self.satiated,
-			self.route.len(),
-			self.route
-			);
+	pub fn is_satiated(&self) -> bool {
+		self.satiated
+		}
+
+	pub fn get_route(&self) -> &str {
+		&self.route
+		}
+
+	pub fn get_route_length(&self) -> usize {
+		self.route.len()
+		}
+
+	pub fn get_routes_count(&self) -> usize {
+		self.routes_counter
 		}
 	}

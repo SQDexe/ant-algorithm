@@ -8,6 +8,6 @@
 //     chars_sub(chr, DEFAULT_POSITION) as usize
 //     }
 
-pub fn distance(dx: i32, dy: i32) -> f64 {
+pub fn euclidean_distance(dx: i32, dy: i32) -> f64 {
     ((dx * dx + dy * dy) as f64).sqrt()
     }

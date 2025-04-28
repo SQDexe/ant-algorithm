@@ -15,36 +15,24 @@ pub struct AntHill {
     }
 
 impl AntHill {
-    pub fn new(world: &Rc<RefCell<World>>, number_of_ants: usize, pheromone: f64) -> Self {
-        let mut ants = Vec::with_capacity(number_of_ants);
-
-        for _ in 0 .. number_of_ants {
-            ants.push(Ant::new(Rc::clone(world), pheromone));
+    pub fn new(world: &Rc<RefCell<World>>, number_of_ants: usize, pheromone: f64, returns: bool) -> Self {
+        AntHill {
+            number_of_ants,
+            ants: (0 .. number_of_ants)
+                .map(|_| Ant::new(Rc::clone(world), pheromone, returns))
+                .collect()
             }
-
-        AntHill { number_of_ants, ants }
-        }
-
-    pub fn get_avrage_route_length(&self) -> f64 {
-        self.ants.iter()
-            .map(|e| e.route.len() as f64)
-            .sum::<f64>() / self.number_of_ants as f64
-        }
-
-    pub fn get_satiated_ants(&self) -> usize {
-        self.ants.iter().filter(|&e| e.satiated).count()
         }
 
     pub fn reset(&mut self) {
-        for ant in self.ants.iter_mut() {
-            ant.reset();
-            }
+        self.ants.iter_mut()
+            .for_each(Ant::reset);
         }
 
     pub fn action(&mut self) {
-        for ant in self.ants.iter_mut().filter(|e| ! e.satiated) {
-            ant.action();
-            }
+        self.ants.iter_mut()
+            .filter(|ant| ! ant.is_satiated())
+            .for_each(Ant::action);
         }
 
     pub fn show(&self) {
@@ -53,9 +41,34 @@ impl AntHill {
 | satiated | len | route
 | ---------|-----|-------"
                 );
-        for ant in self.ants.iter() {
-            ant.show();
-            }
+
+        self.ants.iter()
+            .for_each(|ant|
+                println!("| {:>8} | {:>3} | {}",
+                    ant.is_satiated(),
+                    ant.get_route_length(),
+                    ant.get_route()
+                    )
+                );
+
         println!("| o>--------------------<o");
+        }
+
+    pub fn get_average_route_length(&self) -> f64 {
+        self.ants.iter()
+            .map(|ant| ant.get_route_length() as f64)
+            .sum::<f64>() / self.number_of_ants as f64
+        }
+
+    pub fn get_average_routes_count(&self) -> f64 {
+        self.ants.iter()
+            .map(|ant| ant.get_routes_count() as f64)
+            .sum::<f64>() / self.number_of_ants as f64
+        }
+
+    pub fn get_satiated_ants_count(&self) -> usize {
+        self.ants.iter()
+            .filter(|&ant| ant.is_satiated())
+            .count()
         }
     }
