@@ -27,16 +27,12 @@ pub struct World {
 
 impl World {
     pub fn new(point_list: &[(char, i32, i32)], number_of_decision_points: usize, anthill_name: char, foodsource_name: char, select_method: Selection, point_preference: Preference) -> Self {
-        let (mut points, mut auxils) = {
-            let nop = point_list.len();
-            (Vec::with_capacity(nop), Vec::with_capacity(nop))
-            };
-
-        point_list.iter()
-            .for_each(|&(name, x, y)| {
-                points.push(Point::new(name, x, y, 0.0));
-                auxils.push(Auxil::new('\0', 0.0));
-                });
+        let (points, auxils) = point_list.iter()
+            .map(|&(name, x, y)| (
+                Point::new(name, x, y, 0.0),
+                Auxil::new('\0', 0.0)
+                ))
+            .unzip();
 
         World {
             number_of_decision_points,

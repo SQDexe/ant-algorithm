@@ -1,6 +1,7 @@
 use {
     std::{
         cell::RefCell,
+        iter::repeat_with,
         rc::Rc
         },
     crate::{
@@ -18,8 +19,8 @@ impl AntHill {
     pub fn new(world: &Rc<RefCell<World>>, number_of_ants: usize, pheromone: f64, returns: bool) -> Self {
         AntHill {
             number_of_ants,
-            ants: (0 .. number_of_ants)
-                .map(|_| Ant::new(Rc::clone(world), pheromone, returns))
+            ants: repeat_with(|| Ant::new(Rc::clone(world), pheromone, returns))
+                .take(number_of_ants)
                 .collect()
             }
         }
