@@ -4,12 +4,18 @@ use {
         random_range
         },
     crate::{
-        auxil::Auxil,
+        auxil::Auxil, consts::{
+            value::{
+                MINUTE,
+                UNKOWN
+                },
+            PHERO_CALC_BIAS
+            },
         enums::{
+            Dispersion,
             Preference,
             Selection
             },
-        consts::value,
         point::Point,
         utils::euclidean_distance
         }
@@ -17,38 +23,77 @@ use {
 
 pub struct World {
     number_of_decision_points: usize,
+    ants_return: bool,
+    pheromone: f64,
+    factor: f64,
     anthill_name: char,
     foodsource_name: char,
     points: Vec<Point>,
     auxils: Vec<Auxil>,
+    disperse_operation: fn (&Point, f64) -> f64,
     get_index_operation: fn (&Self) -> usize,
-    calculate_distance_operation: fn (&Point, i32, i32) -> f64
+    preference_operation: fn (&Point, i32, i32) -> f64
     }
 
 impl World {
-    pub fn new(point_list: &[(char, i32, i32)], number_of_decision_points: usize, anthill_name: char, foodsource_name: char, select_method: Selection, point_preference: Preference) -> Self {
+    pub fn new(
+    point_list: &[(char, i32, i32)],
+    number_of_decision_points: usize,
+    ants_return: bool,
+    pheromone: f64,
+    factor: Option<f64>,
+    dispersion_method: Option<Dispersion>,
+    select_method: Selection,
+    point_preference: Preference
+    ) -> Self {
+
+        let [(anthill_name, ..), .., (foodsource_name, ..)] = *point_list else {
+            unreachable!()
+            };
+        
         let (points, auxils) = point_list.iter()
             .map(|&(name, x, y)| (
                 Point::new(name, x, y, 0.0),
-                Auxil::new('\0', 0.0)
+                Auxil::new('\0', UNKOWN)
                 ))
             .unzip();
 
         World {
             number_of_decision_points,
+            ants_return,
+            /* moved from 'ant.rs' */
+            pheromone,
+            factor: match factor {
+                Some(0.0) =>
+                    panic!("Unsupported FACTOR value"),
+                Some(value) => value,
+                _ => UNKOWN
+                },
             anthill_name,
             foodsource_name,
             points,
             auxils,
+            disperse_operation: match dispersion_method {
+                Some(Dispersion::Linear) => |point, factor|
+                    point.pheromone - factor,
+                Some(Dispersion::Exponential) => |point, factor|
+                    point.pheromone / factor,
+                Some(Dispersion::Relative) => |point, factor|
+                    point.pheromone * (1.0 - factor),
+                _ => |_, _| UNKOWN
+                },
             get_index_operation: match select_method {
                 Selection::Random => Self::randomly,
                 Selection::Roulette => Self::roulette,
                 Selection::Greedy => Self::greedy
                 },
-            calculate_distance_operation: match point_preference {
-                Preference::Compound => Self::compound,
-                Preference::Distance => Self::distance,
-                Preference::Pheromone => Self::pheromone
+            preference_operation: match point_preference {
+                Preference::Compound => |point, x, y|
+                    (point.pheromone + PHERO_CALC_BIAS) / euclidean_distance(x - point.x, y - point.y),
+                Preference::Distance => |point, x, y|
+                    PHERO_CALC_BIAS / euclidean_distance(x - point.x, y - point.y),
+                Preference::Pheromone => |point, _, _|
+                    point.pheromone + PHERO_CALC_BIAS
                 }
             }
         }
@@ -75,6 +120,7 @@ impl World {
         let mut index = 0;
         let mut rest = helper[index];
         let chance: f64 = random();
+
         while rest < chance {
             index += 1;
             rest += helper[index];
@@ -86,25 +132,6 @@ impl World {
     const fn greedy(&self) -> usize {
         0
         }
-
-    fn compound(point: &Point, x: i32, y: i32) -> f64 {
-        (point.pheromone + 1.0) / euclidean_distance(x - point.x, y - point.y)
-        }
-    
-    fn distance(point: &Point, x: i32, y: i32) -> f64 {
-        1.0 / euclidean_distance(x - point.x, y - point.y)
-        }
-
-    fn pheromone(point: &Point, _: i32, _: i32) -> f64 {
-        point.pheromone + 1.0
-        }
-
-    // pub fn reset_pheromons(&mut self) {
-    //     self.points.iter_mut()
-    //         .for_each(|point|
-    //             point.pheromone = 0.0
-    //             );
-    //     }
 
     /* moved from 'ant.rs' */
     fn reset_auxils(&mut self) {
@@ -121,21 +148,28 @@ impl World {
             );
         }
 
+    fn set_pheromones(&mut self, func: fn(&Point, f64) -> f64) {
+        self.points.iter_mut()
+            .for_each(|point|
+                point.pheromone = func(point, self.factor).max(0.0)
+                );
+        }
+
     /* moved from 'ant.rs' */
-    pub fn calculate_distance(&mut self, position: char, route: &str) {
+    pub fn calculate_preference(&mut self, position: char, visited: &str) {
         self.reset_auxils();
 
-        let Point { x, y, .. } = self.points.iter()
-            .find(|&point| point.name == position)
+        let Point { x, y, .. } = *self.points.iter()
+            .find(|point| point.name == position)
             .unwrap();
 
         self.auxils.iter_mut().zip(self.points.iter())
             .for_each(|(auxil, point)| {
                 let name = auxil.name;
-                auxil.ratio = if name == position || route.contains(name) {
-                    value::MINUTE
+                auxil.ratio = if name == position || visited.contains(name) {
+                    MINUTE
                 } else {
-                    (self.calculate_distance_operation)(&point, *x, *y)
+                    (self.preference_operation)(&point, x, y)
                     }
                 });
 
@@ -143,23 +177,36 @@ impl World {
         }
 
     /* moved from 'ant.rs' */
-	pub fn cover_route(&mut self, pheromone: f64, visited: &str) {
-		let cleared = visited.replace(self.anthill_name, "");
+    pub fn cover_route(&mut self, visited: &str) {
+        let cleared = visited.replace(self.anthill_name, "");
 
         self.points.iter_mut()
             .filter(|point| cleared.contains(point.name))
             .for_each(|point|
-                point.pheromone += pheromone
+                point.pheromone += self.pheromone
                 );
-		}
+        }
+
+    // pub fn reset_pheromons(&mut self) {
+    //     self.set_pheromones(|_, _| 0.0);
+    //     }
+
+    pub fn disperse_pheromons(&mut self) {
+        self.set_pheromones(self.disperse_operation);
+        }
 
     pub fn show(&self) {
         println!("| o>--- world ---<o");
 
-        self.points.iter().enumerate()
-            .for_each(|(i, point)|
-                println!("| {:>3}. {} - {}", i, point.name, point.pheromone
-                ));
+        print!("{}",
+            self.points.iter().enumerate()
+                .map(|(i, point)|
+                    format!("| {:>3}. {} - {}\n",
+                        i, point.name, point.pheromone
+                        )
+                    )
+                .collect::<String>()
+            );
 
         println!("| o>-------------<o");
         }
@@ -170,6 +217,10 @@ impl World {
     
     pub fn get_foodsource(&self) -> char {
         self.foodsource_name
+        }
+
+    pub fn get_ants_return(&self) -> bool {
+        self.ants_return
         }
 
     pub fn get_auxils(&self) -> &[Auxil] {

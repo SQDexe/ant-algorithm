@@ -16,19 +16,19 @@ pub struct AntHill {
     }
 
 impl AntHill {
-    pub fn new(world: &Rc<RefCell<World>>, number_of_ants: usize, pheromone: f64, returns: bool) -> Self {
+    pub fn new(world: &Rc<RefCell<World>>, number_of_ants: usize) -> Self {
         AntHill {
             number_of_ants,
-            ants: repeat_with(|| Ant::new(Rc::clone(world), pheromone, returns))
+            ants: repeat_with(|| Ant::new(Rc::clone(world)))
                 .take(number_of_ants)
                 .collect()
             }
         }
 
-    pub fn reset(&mut self) {
-        self.ants.iter_mut()
-            .for_each(Ant::reset);
-        }
+    // pub fn reset(&mut self) {
+    //     self.ants.iter_mut()
+    //         .for_each(Ant::reset);
+    //     }
 
     pub fn action(&mut self) {
         self.ants.iter_mut()
@@ -41,16 +41,17 @@ impl AntHill {
 "| o>------- ants -------<o
 | satiated | len | route
 | ---------|-----|-------"
-                );
+            );
 
-        self.ants.iter()
-            .for_each(|ant|
-                println!("| {:>8} | {:>3} | {}",
-                    ant.is_satiated(),
-                    ant.get_route_length(),
-                    ant.get_route()
+        print!("{}",
+            self.ants.iter()
+                .map(|ant|
+                    format!("| {:>8} | {:>3} | {}\n",
+                        ant.is_satiated(), ant.get_route_length(), ant.get_route()
+                        )
                     )
-                );
+                .collect::<String>()
+            );
 
         println!("| o>--------------------<o");
         }
@@ -69,7 +70,12 @@ impl AntHill {
 
     pub fn get_satiated_ants_count(&self) -> usize {
         self.ants.iter()
-            .filter(|&ant| ant.is_satiated())
+            .filter(|ant| ant.is_satiated())
             .count()
+        }
+
+    pub fn get_all_ants_satiated(&self) -> bool {
+        self.ants.iter()
+            .all(Ant::is_satiated)
         }
     }
