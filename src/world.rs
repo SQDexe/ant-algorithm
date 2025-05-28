@@ -3,108 +3,57 @@ use {
         random,
         random_range
         },
+    std::{
+        collections::HashSet,
+        process::exit
+        },
     crate::{
-        auxil::Auxil, consts::{
-            value::{
-                MINUTE,
-                UNKOWN
-                },
-            PHERO_CALC_BIAS
-            },
-        enums::{
-            Dispersion,
+        consts::bias,
+        tech::{
+            DistanceFunction,
             Preference,
-            Selection
+            Selection,
+            Metric,
+            Dispersion,
+            PointInfo
             },
-        point::Point,
-        utils::euclidean_distance
+        utils::{
+            distance,
+            disperse,
+            preference,
+            Auxil,
+            Point
+            }
         }
     };
 
 pub struct World {
-    number_of_decision_points: usize,
-    ants_return: bool,
-    pheromone: f64,
-    factor: f64,
-    anthill_name: char,
-    foodsource_name: char,
     points: Vec<Point>,
     auxils: Vec<Auxil>,
-    disperse_operation: fn (&Point, f64) -> f64,
+    anthill_id: char,
+    foodsource_ids: HashSet<char>,
+    number_of_decision_points: usize,
+    pheromone: f64,
+    consume_rate: u32,
+    ants_return: bool,
     get_index_operation: fn (&Self) -> usize,
-    preference_operation: fn (&Point, i32, i32) -> f64
+    preference_operation: fn (&Point, i32, i32, DistanceFunction) -> f64,
+    distance_operation: DistanceFunction,
+    disperse_operation: fn (&Point, f64) -> f64,
+    factor: f64
     }
 
 impl World {
-    pub fn new(
-    point_list: &[(char, i32, i32)],
-    number_of_decision_points: usize,
-    ants_return: bool,
-    pheromone: f64,
-    factor: Option<f64>,
-    dispersion_method: Option<Dispersion>,
-    select_method: Selection,
-    point_preference: Preference
-    ) -> Self {
-
-        let [(anthill_name, ..), .., (foodsource_name, ..)] = *point_list else {
-            unreachable!()
-            };
-        
-        let (points, auxils) = point_list.iter()
-            .map(|&(name, x, y)| (
-                Point::new(name, x, y, 0.0),
-                Auxil::new('\0', UNKOWN)
-                ))
-            .unzip();
-
-        World {
-            number_of_decision_points,
-            ants_return,
-            /* moved from 'ant.rs' */
-            pheromone,
-            factor: match factor {
-                Some(0.0) =>
-                    panic!("Unsupported FACTOR value"),
-                Some(value) => value,
-                _ => UNKOWN
-                },
-            anthill_name,
-            foodsource_name,
-            points,
-            auxils,
-            disperse_operation: match dispersion_method {
-                Some(Dispersion::Linear) => |point, factor|
-                    point.pheromone - factor,
-                Some(Dispersion::Exponential) => |point, factor|
-                    point.pheromone / factor,
-                Some(Dispersion::Relative) => |point, factor|
-                    point.pheromone * (1.0 - factor),
-                _ => |_, _| UNKOWN
-                },
-            get_index_operation: match select_method {
-                Selection::Random => Self::randomly,
-                Selection::Roulette => Self::roulette,
-                Selection::Greedy => Self::greedy
-                },
-            preference_operation: match point_preference {
-                Preference::Compound => |point, x, y|
-                    (point.pheromone + PHERO_CALC_BIAS) / euclidean_distance(x - point.x, y - point.y),
-                Preference::Distance => |point, x, y|
-                    PHERO_CALC_BIAS / euclidean_distance(x - point.x, y - point.y),
-                Preference::Pheromone => |point, _, _|
-                    point.pheromone + PHERO_CALC_BIAS
-                }
-            }
+    pub fn builder() -> WorldBuilder {
+        WorldBuilder::default()
         }
 
-    /* moved from 'ant.rs' */
-    fn randomly(&self) -> usize {
-        random_range(0 .. self.number_of_decision_points)
-        }
-
-    /* moved from 'ant.rs' */
-    fn roulette(&self) -> usize {
+    /* Selection methods */
+    const fn select_greedy(&self) -> usize
+        { 0 }
+    fn select_randomly(&self) -> usize
+        { random_range(0 .. self.number_of_decision_points) }
+    fn select_roulette(&self) -> usize {
         let nodp = self.number_of_decision_points;
         
         let sum: f64 = self.auxils.iter()
@@ -129,111 +78,267 @@ impl World {
         index
         }
 
-    const fn greedy(&self) -> usize {
-        0
-        }
-
-    /* moved from 'ant.rs' */
+    /* Logic methods */
     fn reset_auxils(&mut self) {
-        self.auxils.iter_mut().zip(self.points.iter())
+        self.auxils.iter_mut()
+            .zip(self.points.iter())
             .for_each(|(auxil, point)|
-                auxil.name = point.name
+                auxil.id = point.id
                 );
         }
 
-    /* moved from 'ant.rs' */
     fn sort_auxils(&mut self) {
         self.auxils.sort_unstable_by(|a, b|
             b.ratio.total_cmp(&a.ratio)
             );
         }
 
-    fn set_pheromones(&mut self, func: fn(&Point, f64) -> f64) {
+    fn set_pheromones(&mut self, func: fn (&Point, f64) -> f64) {
         self.points.iter_mut()
             .for_each(|point|
                 point.pheromone = func(point, self.factor).max(0.0)
                 );
         }
 
-    /* moved from 'ant.rs' */
-    pub fn calculate_preference(&mut self, position: char, visited: &str) {
+    pub fn get_new_position(&mut self, position_id: char, visited: &str) -> char {
         self.reset_auxils();
+        
+        if self.foodsource_ids.is_empty() {
+            eprintln!("A problem occured while calculating postions - lack of foodsources");
+            exit(1);
+            }
 
-        let Point { x, y, .. } = *self.points.iter()
-            .find(|point| point.name == position)
-            .unwrap();
+        let Some(&Point { x, y, .. }) = self.points.iter()
+            .find(|point| point.id == position_id)
+        else {
+            eprintln!("A problem occured while calculating postions - recived an invalid point id: {position_id}");
+            exit(1);
+            };
 
-        self.auxils.iter_mut().zip(self.points.iter())
+        self.auxils.iter_mut()
+            .zip(self.points.iter())
             .for_each(|(auxil, point)| {
-                let name = auxil.name;
-                auxil.ratio = if name == position || visited.contains(name) {
-                    MINUTE
+                auxil.ratio = if visited.contains(auxil.id) {
+                    bias::MINUTE
                 } else {
-                    (self.preference_operation)(&point, x, y)
+                    (self.preference_operation)(point, x, y, self.distance_operation)
                     }
                 });
 
         self.sort_auxils();
+
+        let mut choice = (self.get_index_operation)(self);
+        let mut antiblock: u8 = 0;
+
+        while visited.contains(self.auxils[choice].id) {
+            choice = (self.get_index_operation)(self);
+
+            antiblock += 1;
+            if antiblock == u8::MAX {
+                eprintln!("A problem occured while picking point - got stuck in loop");
+                exit(1);
+                }
+            }
+        
+        self.auxils[choice].id
         }
 
-    /* moved from 'ant.rs' */
     pub fn cover_route(&mut self, visited: &str) {
-        let cleared = visited.replace(self.anthill_name, "");
+        let cleared = visited.replace(self.anthill_id, "");
 
-        self.points.iter_mut()
-            .filter(|point| cleared.contains(point.name))
-            .for_each(|point|
-                point.pheromone += self.pheromone
-                );
+        for point in self.points.iter_mut()
+        .filter(|point| cleared.contains(point.id)) {
+            point.pheromone += self.pheromone
+            }
         }
 
-    // pub fn reset_pheromons(&mut self) {
-    //     self.set_pheromones(|_, _| 0.0);
-    //     }
+    pub fn reset_pheromons(&mut self) {
+        self.set_pheromones(|_, _| 0.0);
+        }
 
     pub fn disperse_pheromons(&mut self) {
         self.set_pheromones(self.disperse_operation);
         }
 
-    pub fn show(&self) {
-        println!("| o>--- world ---<o");
+    pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
+        let Some(point) = self.points.iter_mut()
+            .find(|point| point.id == position_id)
+        else {
+            eprintln!("A problem occured while updating points - recived an invalid point id: {position_id}");
+            exit(1);
+            };
 
-        print!("{}",
-            self.points.iter().enumerate()
-                .map(|(i, point)|
-                    format!("| {:>3}. {} - {}\n",
-                        i, point.name, point.pheromone
-                        )
+        point.food = amount;
+        self.foodsource_ids.insert(position_id);
+        }
+
+    pub fn consume_foodsource(&mut self, position_id: char) {
+        let Some(point) = self.points.iter_mut()
+            .find(|point| point.id == position_id) 
+        else {
+            eprintln!("A problem occured while consuming food - recived an invalid point id: {position_id}");
+            exit(1);
+            };
+
+        if let Some(new_val) = point.food.checked_sub(self.consume_rate) {
+            if new_val == 0 {
+                self.foodsource_ids.remove(&position_id);
+                }
+            point.food = new_val;
+        } else {
+            eprintln!("A problem occured consuming food - tried consuming from an empty foodsource");
+            exit(1);
+            }
+        }
+
+    pub fn is_foodsource(&self, position_id: &char) -> bool { 
+        self.foodsource_ids.contains(position_id)
+        }
+
+    pub fn show(&self) {
+        println!(
+"| o>--- world ---<o
+{}| o>-------------<o",
+            self.points.iter()
+                .map(|Point { id, food, pheromone, .. }|
+                    format!("| # {id}: {food:>4} - {pheromone}\n")
                     )
                 .collect::<String>()
             );
-
-        println!("| o>-------------<o");
         }
 
-    pub fn get_anthill(&self) -> char {
-        self.anthill_name
-        }
-    
-    pub fn get_foodsource(&self) -> char {
-        self.foodsource_name
-        }
-
-    pub fn get_ants_return(&self) -> bool {
-        self.ants_return
-        }
-
-    pub fn get_auxils(&self) -> &[Auxil] {
-        &self.auxils
-        }
-
+    /* Getters */
+    pub fn get_anthill(&self) -> char
+        { self.anthill_id }
+    pub fn do_ants_consume(&self) -> bool
+        { self.consume_rate != 0 }
+    pub fn do_ants_return(&self) -> bool
+        { self.ants_return }
     pub fn get_pheromones_per_point(&self) -> Vec<f64> {
         self.points.iter()
             .map(|point| point.pheromone)
             .collect()
         }
-    
-    pub fn get_index(&self) -> usize {
-        (self.get_index_operation)(self)
+    }
+
+
+/* Technical stuff */
+#[derive(Default)]
+pub struct WorldBuilder {
+    point_list: Option<Vec<PointInfo>>,
+    number_of_decision_points: Option<usize>,
+    pheromone: Option<f64>,
+    consume_rate: Option<u32>,
+    ants_return: Option<bool>,
+    select_method: Option<Selection>,
+    point_preference: Option<Preference>,
+    metric: Option<Metric>,
+    dispersion_method: Option<Dispersion>,
+    factor: Option<f64>,
+    }
+
+/* Technical stuff */
+impl WorldBuilder {
+    pub fn build(self) -> Option<World> {
+        let point_list = self.point_list?;
+
+        let anthill_id = point_list.iter()
+            .next()?
+            .get_id();
+
+        let foodsource_ids = HashSet::from_iter(
+            point_list.iter()
+                .filter_map(|&point_info| match point_info {
+                    PointInfo::Food(.., 0) => None,
+                    PointInfo::Food(id, ..) => Some(id),
+                    _ => None
+                    })
+            );
+
+        let (points, auxils) = point_list.into_iter()
+            .map(|point_info| (
+                match point_info {
+                    PointInfo::Empty(id, x, y) => Point::new(id, x, y, 0),
+                    PointInfo::Food(id, x, y, food) => Point::new(id, x, y, food)    
+                    },
+                Auxil::new('\0', f64::NAN)
+                ))
+            .unzip();
+
+        Some(World {
+            points,
+            auxils,
+            anthill_id,
+            foodsource_ids,
+            number_of_decision_points: self.number_of_decision_points?,
+            pheromone: self.pheromone?,
+            ants_return: self.ants_return?,
+            consume_rate: self.consume_rate?,
+            get_index_operation: match self.select_method? {
+                Selection::Random => World::select_randomly,
+                Selection::Roulette => World::select_roulette,
+                Selection::Greedy => World::select_greedy
+                },
+            preference_operation: match self.point_preference? {
+                Preference::Distance => preference::distance,
+                Preference::Pheromone => preference::pheromone,
+                Preference::Food => preference::food,
+                Preference::PD => preference::phero_dist,
+                Preference::FD => preference::food_dist,
+                Preference::PF => preference::phero_food,
+                Preference::PFD => preference::phero_food_dist
+                },
+            distance_operation: match self.metric? {
+                Metric::Chebyshev => distance::chebyshev,
+                Metric::Euclidean => distance::euclidean,
+                Metric::Taxicab => distance::taxicab
+                },
+            disperse_operation: match self.dispersion_method {
+                Some(Dispersion::Linear) => disperse::linear,
+                Some(Dispersion::Exponential) => disperse::exponential,
+                Some(Dispersion::Relative) => disperse::relative,
+                _ => |_, _| f64::NAN
+                },
+            factor: self.factor.unwrap_or(f64::NAN)
+            })
+        }
+
+    /* Setters */
+    pub fn point_list(mut self, point_list: Vec<PointInfo>) -> Self {
+        self.point_list = Some(point_list);
+        self
+        }
+    pub fn decision_points(mut self, number_of_decision_points: usize) -> Self {
+        self.number_of_decision_points = Some(number_of_decision_points);
+        self
+        }
+    pub fn pheromone(mut self, pheromone: f64) -> Self {
+        self.pheromone = Some(pheromone);
+        self
+        }
+    pub fn ants_return(mut self, ants_return: bool) -> Self {
+        self.ants_return = Some(ants_return);
+        self
+        }
+    pub fn consume_rate(mut self, consume_rate: u32) -> Self {
+        self.consume_rate = Some(consume_rate);
+        self
+        }
+    pub fn select_method(mut self, select_method: Selection) -> Self {
+        self.select_method = Some(select_method);
+        self
+        }
+    pub fn point_preference(mut self, point_preference: Preference) -> Self {
+        self.point_preference = Some(point_preference);
+        self
+        }
+    pub fn metric(mut self, metric: Metric) -> Self {
+        self.metric = Some(metric);
+        self
+        }
+    pub fn dispersion_factor(mut self, dispersion_method: Option<Dispersion>, factor: Option<f64>) -> Self {
+        self.dispersion_method = dispersion_method;
+        self.factor = factor;
+        self
         }
     }

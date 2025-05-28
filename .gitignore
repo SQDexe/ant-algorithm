@@ -1,10 +1,7 @@
 # Build
 /target
-Cargo.lock
+*.lock
 
 # Git
 /.git
 /.vscode
-
-# Other
-/tmp
