@@ -64,8 +64,9 @@ pub struct Args {
 /* Technical stuff */
 type GenericError = Box<dyn Error + Send + Sync>;
 type Action = (usize, char, u32);
-type Pair = (char, u32);#[derive(Clone)]
+type Pair = (char, u32);
 
+#[derive(Clone)]
 pub struct GridTable (
     Vec<PointInfo>
     );
