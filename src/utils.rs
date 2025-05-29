@@ -1,13 +1,3 @@
-// const DEFAULT_POSITION: char = 'a';
-
-// pub const fn chars_sub(chr1: char, chr2: char) -> i32 {
-//     (chr1 as i32).saturating_sub(chr2 as i32)
-//     }
-
-// pub const fn def_chars_sub(chr: char) -> usize {
-//     chars_sub(chr, DEFAULT_POSITION) as usize
-//     }
-
 /* Functions for calulating distance in metric */
 pub mod distance {
     pub fn chebyshev(x0: i32, y0: i32, x1: i32, y1: i32) -> f64 {
@@ -34,6 +24,7 @@ pub mod disperse {
         { point.pheromone * (1.0 - factor) }
     }
 
+/* Functions for calculating point preference */
 pub mod preference {
     use crate::{
         consts::bias,
@@ -41,7 +32,6 @@ pub mod preference {
         utils::Point
         };
 
-    /* Point preference methods */
     pub fn distance(point: &Point, x: i32, y: i32, dist_func: DistanceFunction) -> f64
         { bias::NEUTRAL / dist_func(x, y, point.x, point.y) }
     pub const fn pheromone(point: &Point, _: i32, _: i32, _: DistanceFunction) -> f64

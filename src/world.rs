@@ -128,16 +128,9 @@ impl World {
         self.sort_auxils();
 
         let mut choice = (self.get_index_operation)(self);
-        let mut antiblock: u8 = 0;
 
         while visited.contains(self.auxils[choice].id) {
             choice = (self.get_index_operation)(self);
-
-            antiblock += 1;
-            if antiblock == u8::MAX {
-                eprintln!("A problem occured while picking point - got stuck in loop");
-                exit(1);
-                }
             }
         
         self.auxils[choice].id
