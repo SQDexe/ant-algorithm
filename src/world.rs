@@ -10,6 +10,7 @@ use {
     crate::{
         consts::bias,
         tech::{
+            BoolSelect,
             DistanceFunction,
             Preference,
             Selection,
@@ -80,11 +81,10 @@ impl World {
 
     /* Logic methods */
     fn reset_auxils(&mut self) {
-        self.auxils.iter_mut()
-            .zip(self.points.iter())
-            .for_each(|(auxil, point)|
-                auxil.id = point.id
-                );
+        for (auxil, point) in self.auxils.iter_mut()
+        .zip(self.points.iter()) {
+            auxil.id = point.id
+            }
         }
 
     fn sort_auxils(&mut self) {
@@ -94,10 +94,9 @@ impl World {
         }
 
     fn set_pheromones(&mut self, func: fn (&Point, f64) -> f64) {
-        self.points.iter_mut()
-            .for_each(|point|
-                point.pheromone = func(point, self.factor).max(0.0)
-                );
+        for point in &mut self.points {
+            point.pheromone = func(point, self.factor).max(0.0)
+            };
         }
 
     pub fn get_new_position(&mut self, position_id: char, visited: &str) -> char {
@@ -115,15 +114,13 @@ impl World {
             exit(1);
             };
 
-        self.auxils.iter_mut()
-            .zip(self.points.iter())
-            .for_each(|(auxil, point)| {
-                auxil.ratio = if visited.contains(auxil.id) {
-                    bias::MINUTE
-                } else {
-                    (self.preference_operation)(point, x, y, self.distance_operation)
-                    }
-                });
+        for (auxil, point) in self.auxils.iter_mut()
+        .zip(self.points.iter()) {
+            auxil.ratio = visited.contains(auxil.id).select(
+                bias::MINUTE,
+                (self.preference_operation)(point, x, y, self.distance_operation)
+                )
+            };
 
         self.sort_auxils();
 

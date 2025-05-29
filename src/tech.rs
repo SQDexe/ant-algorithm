@@ -21,6 +21,16 @@ macro_rules! assertion {
         )*};
     }
 
+pub trait BoolSelect<T> {
+    fn select(&self, truthy: T, falsy: T) -> T;
+    }
+
+impl<T> BoolSelect<T> for bool {
+    fn select(&self, truthy: T, falsy: T) -> T {
+        if *self { truthy } else { falsy }
+        }
+    }
+
 /* Shorthand for distance calculation function */
 pub type DistanceFunction = fn (i32, i32, i32, i32) -> f64;
 
