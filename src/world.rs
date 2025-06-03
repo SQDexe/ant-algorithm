@@ -3,30 +3,45 @@ use {
         random,
         random_range
         },
-    std::{
-        collections::HashSet,
-        process::exit
-        },
+    std::collections::HashSet,
     crate::{
+        error_exit,
+        zip,
         consts::bias,
         tech::{
             BoolSelect,
-            DistanceFunction,
-            Preference,
-            Selection,
-            Metric,
             Dispersion,
-            PointInfo
+            DistanceFunction,
+            Metric,
+            PointInfo,
+            Preference,
+            Selection
             },
         utils::{
-            distance,
             disperse,
+            distance,
             preference,
             Auxil,
             Point
             }
         }
     };
+
+/* Technical stuff - macro for finding point */
+macro_rules! find_point {
+    ( $points:expr, $id:ident ) => {
+        $points.iter()
+            .find(|point| point.id == $id)
+        };
+    ( mut $points:expr, $id:ident ) => {
+        $points.iter_mut()
+            .find(|point| point.id == $id)
+        };
+    ( into $points:expr, $id:ident ) => {
+        $points.into_iter()
+            .find(|point| point.id == $id)
+        };
+    }
 
 pub struct World {
     points: Vec<Point>,
@@ -69,7 +84,8 @@ impl World {
 
         let mut index = 0;
         let mut rest = helper[index];
-        let chance: f64 = random();
+        
+        let chance = random();
 
         while rest < chance {
             index += 1;
@@ -81,8 +97,7 @@ impl World {
 
     /* Logic methods */
     fn reset_auxils(&mut self) {
-        for (auxil, point) in self.auxils.iter_mut()
-        .zip(self.points.iter()) {
+        for (auxil, point) in zip!(mut self.auxils, self.points) {
             auxil.id = point.id
             }
         }
@@ -103,19 +118,15 @@ impl World {
         self.reset_auxils();
         
         if self.foodsource_ids.is_empty() {
-            eprintln!("A problem occured while calculating postions - lack of foodsources");
-            exit(1);
+            error_exit!(1, "!!! A problem occured while calculating postions - lack of foodsources !!!");
             }
 
-        let Some(&Point { x, y, .. }) = self.points.iter()
-            .find(|point| point.id == position_id)
+        let Some(&Point { x, y, .. }) = find_point!(self.points, position_id)
         else {
-            eprintln!("A problem occured while calculating postions - recived an invalid point id: {position_id}");
-            exit(1);
+            error_exit!(1, "!!! A problem occured while calculating postions - recived an invalid point id: {} !!!", position_id);
             };
 
-        for (auxil, point) in self.auxils.iter_mut()
-        .zip(self.points.iter()) {
+        for (auxil, point) in zip!(mut self.auxils, self.points) {
             auxil.ratio = visited.contains(auxil.id).select(
                 bias::MINUTE,
                 (self.preference_operation)(point, x, y, self.distance_operation)
@@ -151,11 +162,9 @@ impl World {
         }
 
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
-        let Some(point) = self.points.iter_mut()
-            .find(|point| point.id == position_id)
+        let Some(point) = find_point!(mut self.points, position_id)
         else {
-            eprintln!("A problem occured while updating points - recived an invalid point id: {position_id}");
-            exit(1);
+            error_exit!(1, "!!! A problem occured while updating points - recived an invalid point id: {} !!!", position_id);
             };
 
         point.food = amount;
@@ -163,21 +172,18 @@ impl World {
         }
 
     pub fn consume_foodsource(&mut self, position_id: char) {
-        let Some(point) = self.points.iter_mut()
-            .find(|point| point.id == position_id) 
+        let Some(point) = find_point!(mut self.points, position_id)
         else {
-            eprintln!("A problem occured while consuming food - recived an invalid point id: {position_id}");
-            exit(1);
+            error_exit!(1, "!!! A problem occured while consuming food - recived an invalid point id: {} !!!", position_id);
             };
 
-        if let Some(new_val) = point.food.checked_sub(self.consume_rate) {
-            if new_val == 0 {
+        if let Some(amount) = point.food.checked_sub(self.consume_rate) {
+            point.food = amount;
+            if amount == 0 {
                 self.foodsource_ids.remove(&position_id);
                 }
-            point.food = new_val;
         } else {
-            eprintln!("A problem occured consuming food - tried consuming from an empty foodsource");
-            exit(1);
+            error_exit!(1, "!!! A problem occured consuming food - tried consuming from an empty foodsource !!!");
             }
         }
 
@@ -227,7 +233,7 @@ pub struct WorldBuilder {
     factor: Option<f64>,
     }
 
-/* Technical stuff */
+/* Technical stuff - world builder */
 impl WorldBuilder {
     pub fn build(self) -> Option<World> {
         let point_list = self.point_list?;
@@ -251,7 +257,7 @@ impl WorldBuilder {
                     PointInfo::Empty(id, x, y) => Point::new(id, x, y, 0),
                     PointInfo::Food(id, x, y, food) => Point::new(id, x, y, food)    
                     },
-                Auxil::new('\0', f64::NAN)
+                Auxil::new('\0', bias::UNKOWN)
                 ))
             .unzip();
 
@@ -283,13 +289,13 @@ impl WorldBuilder {
                 Metric::Euclidean => distance::euclidean,
                 Metric::Taxicab => distance::taxicab
                 },
-            disperse_operation: match self.dispersion_method {
-                Some(Dispersion::Linear) => disperse::linear,
-                Some(Dispersion::Exponential) => disperse::exponential,
-                Some(Dispersion::Relative) => disperse::relative,
-                _ => |_, _| f64::NAN
+            disperse_operation: match self.dispersion_method? {
+                Dispersion::Linear => disperse::linear,
+                Dispersion::Exponential => disperse::exponential,
+                Dispersion::Relative => disperse::relative,
+                _ => |_, _| bias::UNKOWN
                 },
-            factor: self.factor.unwrap_or(f64::NAN)
+            factor: self.factor.unwrap_or(bias::UNKOWN)
             })
         }
 
@@ -326,9 +332,9 @@ impl WorldBuilder {
         self.metric = Some(metric);
         self
         }
-    pub fn dispersion_factor(mut self, dispersion_method: Option<Dispersion>, factor: Option<f64>) -> Self {
-        self.dispersion_method = dispersion_method;
-        self.factor = factor;
+    pub fn dispersion_factor(mut self, dispersion_method: Dispersion, factor: f64) -> Self {
+        self.dispersion_method = Some(dispersion_method);
+        self.factor = Some(factor);
         self
         }
     }

@@ -45,15 +45,15 @@ pub struct Args {
     #[clap(short = 'M', long, value_enum, default_value_t = default::METRIC, help = tips::METRIC)]
     pub metric: Metric,
 
-    #[clap(short = 'D', long, value_enum, requires = "factor", help = tips::DISPERSION)]
-    pub dispersion: Option<Dispersion>,
+    #[clap(short = 'D', long, value_enum, requires = "factor", default_value_t = default::DISPERSION, help = tips::DISPERSION)]
+    pub dispersion: Dispersion,
     #[clap(short = 'f', long, help = tips::FACTOR)]
     pub factor: Option<f64>,
     
-    #[clap(short = 'A', long, help = tips::ACTIONS)]
-    pub actions: Option<ActionTable>,
     #[clap(short = 'G', long, help = tips::GRID)]
     pub grid: Option<GridTable>,
+    #[clap(short = 'A', long, help = tips::ACTIONS)]
+    pub actions: Option<ActionTable>,
 
     #[clap(short, long, action, default_value_t = default::QUIET, help = tips::QUIET)]
     pub quiet: bool,

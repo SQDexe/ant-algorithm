@@ -14,15 +14,20 @@ use {
     clap::Parser,
     std::{
         collections::HashSet,
-        env::current_dir,
-        process::exit
+        env::current_dir
         },
     crate::{
         anthill::AntHill,
         args::Args,
-        consts::GRID,
+        consts::{
+            bias,
+            GRID
+            },
         stats::Stats,
-        tech::SmartCell,
+        tech::{
+            Dispersion,
+            SmartCell
+            },
         world::World
         }
     };
@@ -42,7 +47,7 @@ fn main() {
         ( args.cycles, args.ants, args.decision, args.pheromone,
         args.rate, args.returns,
         args.select, args.preference, args.metric,
-        args.dispersion, args.factor,
+        args.dispersion, args.factor.unwrap_or(bias::UNKOWN),
         args.actions
             .and_then(|e| Some(e.build()))
             .unwrap_or_default(),
@@ -70,10 +75,15 @@ fn main() {
         let points_have_unique_ids = point_ids.len() == num_of_points;
         let points_have_unique_postions = point_pos.len() == num_of_points;
         let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision_points);
-        let resonable_num_of_ants = (1 .. 16777216).contains(&ants);
+        let resonable_num_of_ants = (1 ..= 0xffffff).contains(&ants);
         let resonable_num_of_cycles = (1 .. 100).contains(&cycles);
         let positive_nonzero_pheromone_strength = 0.0 < phero;
-        let unset_or_positive_dispersion_factor = factor.is_none_or(|n| 0.0 < n);
+        let unset_or_correct_dispersion_factor = match dispersion {
+            Dispersion::Linear => 0.0 <= factor,
+            Dispersion::Exponential => 1.0 <= factor,
+            Dispersion::Relative => 0.0 <= factor && factor <= 1.0,
+            _ => true
+            };
         let actions_correct = point_ids.is_superset(&actions_ids);
         let anthill_has_no_food = ! grid[0].has_food();
 
@@ -86,7 +96,7 @@ fn main() {
             resonable_num_of_ants,
             resonable_num_of_cycles,
             positive_nonzero_pheromone_strength,
-            unset_or_positive_dispersion_factor,
+            unset_or_correct_dispersion_factor,
             actions_correct,
             anthill_has_no_food
             );
@@ -107,8 +117,7 @@ fn main() {
             .dispersion_factor(dispersion, factor)
             .build()
         else {
-            eprintln!("A problem occured while trying to build the world object - simulation stopped");
-            exit(1);
+            error_exit!(1, "!!! A problem occured while trying to build the world object - simulation stopped !!!");
             };
         SmartCell::new(world)
         };
@@ -121,8 +130,8 @@ fn main() {
 
 
     /* Time saver */
-    show = if show && 1023 < ants {
-        println!("Printing hidden due to big number of ants");
+    show = if show && 0xfff < ants {
+        println!("### Printing hidden due to big number of ants ###");
         false
     } else { show };
         
@@ -144,7 +153,7 @@ fn main() {
         ant_hill.action();
 
         /* Disperse pheromones, if applicable */
-        if dispersion.is_some() {
+        if dispersion.is_set() {
             world_cell.borrow_mut()
                 .disperse_pheromons();
             }
@@ -181,21 +190,17 @@ fn main() {
     /* Show simulation's settings */
     println!(
 "o> ---- SETTINGS ---- <o
-|            cycles: {}
-|              ants: {}
-|         pheromone: {}
-|   decision points: {}
-|   consumtion rate: {}
-|           returns: {}
-|         selection: {:?}
-|       calculation: {:?}
-|            metric: {:?}
-|        dispersion: {:?}
-| dispersion factor: {}",
-    cycles, ants, phero, decision_points,
-    rate, returns,
-    select, preference, metric,
-    dispersion, factor.unwrap_or(0.0),
+|            cycles: {cycles}
+|              ants: {ants}
+|         pheromone: {phero}
+|   decision points: {decision_points}
+|   consumtion rate: {rate}
+|           returns: {returns}
+|         selection: {select}
+|       calculation: {preference}
+|            metric: {metric}
+|        dispersion: {dispersion}
+| dispersion factor: {factor}"
     );
 
     /* Show simulation's statistics */
@@ -205,14 +210,12 @@ fn main() {
     if let Some(filename) = output {
         if let Ok(cwd) = current_dir() {
             if stats.write_to_file(cwd.join(&filename).as_path()).is_ok() {
-                println!("Statistics saved in '{filename}'");
+                println!("### Statistics saved in '{filename}' ###");
+            } else {
+                eprintln!("!!! A problem occured while trying to save the statistics !!!");
                 }
-            else {
-                eprintln!("A problem occured while trying to save the statistics");
-                }
-            }
-        else {
-            eprintln!("A problem occured while trying to get the current working directory");
+        } else {
+            eprintln!("!!! A problem occured while trying to get the current working directory !!!");
             }
         }
     }

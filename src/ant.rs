@@ -31,10 +31,11 @@ impl Ant {
         let ( new_position, food_reached, consume, returns ) = {
             let mut world = self.world_cell.borrow_mut();
 
-            let current_position = world.get_new_position(self.position_id, &self.route);
-            let food_reached = world.is_foodsource(&current_position);
+            let new_position = world.get_new_position(self.position_id, &self.route);
+            let food_reached = world.is_foodsource(&new_position);
 
-            ( current_position, food_reached, world.do_ants_consume(), world.do_ants_return() )
+            ( new_position, food_reached,
+            world.do_ants_consume(), world.do_ants_return() )
             };
         
         self.position_id = new_position;

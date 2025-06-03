@@ -10,44 +10,83 @@ use {
         }
     };
 
+/* Print error, and exit macro */
+#[macro_export]
+macro_rules! error_exit {
+    ( $code:literal, $fstr:expr $(, $arg:expr)* ) => {
+        eprintln!($fstr, $( $arg )* );
+        std::process::exit($code);
+        };
+    }
+
 /* Handy assertion macro */
 #[macro_export]
 macro_rules! assertion {
     ( $($boolean:expr), *) => {$(
         if ! $boolean {
-            eprintln!("Assertion failed on: {}", stringify!($boolean));
-            exit(1);
+            error_exit!(1, "Assertion failed on: {}", stringify!($boolean));
             }
         )*};
     }
 
-pub trait BoolSelect<T> {
-    fn select(&self, truthy: T, falsy: T) -> T;
+/* Iterator zipping shortcut */
+#[macro_export]
+macro_rules! zip {
+    ( mut $iter1:expr, $iter2:expr ) => {
+        $iter1.iter_mut()
+            .zip($iter2.iter())
+        };
+    ( $iter1:expr, $iter2:expr ) => {
+        $iter1.iter()
+            .zip($iter2.iter())
+        };
+    ( mut $iter1:expr, mut $iter2:expr ) => {
+        $iter1.iter_mut()
+            .zip($iter2.iter_mut())
+        };
     }
 
-impl<T> BoolSelect<T> for bool {
-    fn select(&self, truthy: T, falsy: T) -> T {
-        if *self { truthy } else { falsy }
-        }
+/* Derive Display trait for enums */
+macro_rules! derive_enum_display {
+    ( $enum:ident, $( $item:ident ),+ ) => {
+        impl std::fmt::Display for $enum {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", match self {
+                    $( Self::$item => stringify!($item), )+
+                    })
+                }
+            }
+        };
+    ( $enum:ident, $( $key:ident = $value:literal ),+ ) => {
+        impl std::fmt::Display for $enum {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", match self {
+                    $( Self::$key => $value, )+
+                    })
+                }
+            }
+        };
     }
 
 /* Shorthand for distance calculation function */
 pub type DistanceFunction = fn (i32, i32, i32, i32) -> f64;
 
 /* Ways of choosing next point */
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, ValueEnum)]
 pub enum Selection {
     Greedy,
     Random,
     Roulette
     }
 
+derive_enum_display!(Selection, Greedy, Random, Roulette);
+
 /* Ways of calculating preference for the points:
 P - Pheromone
 F - Food
 D - Distance
 */
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, ValueEnum)]
 pub enum Preference {
     Distance,
     Pheromone,
@@ -58,21 +97,37 @@ pub enum Preference {
     PFD
     }
 
+derive_enum_display!(Preference, Distance, Pheromone, Food, PD, FD, PF, PFD);
+
 /* Types of metrics for distance calculation */
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, ValueEnum)]
 pub enum Metric {
     Chebyshev,
     Euclidean,
     Taxicab
     }
 
+derive_enum_display!(Metric, Chebyshev, Euclidean, Taxicab);
+
 /* Types of pheromone dispersion */
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, ValueEnum)]
 pub enum Dispersion {
-    Exponential,
+    None,
     Linear,
+    Exponential,
     Relative
     }
+
+impl Dispersion {
+    pub const fn is_set(&self) -> bool {
+        match self {
+            Dispersion::None => false,
+            _ => true
+            }
+        }
+    }
+
+derive_enum_display!(Dispersion, None, Linear, Exponential, Relative);
 
 /* Holds data needed for constructing world's grid */
 #[derive(Clone, Copy)]
@@ -109,6 +164,35 @@ impl PointInfo {
             &Self::Food(.. , amount) => amount,
             _ => 0   
             }
+        }
+    }
+
+/* Shortcut for Rust's robust if else */
+pub trait BoolSelect<T> {
+    fn select(&self, truthy: T, falsy: T) -> T;
+    }
+
+impl<T> BoolSelect<T> for bool {
+    fn select(&self, truthy: T, falsy: T) -> T {
+        if *self { truthy } else { falsy }
+        }
+    }
+
+/* Collect data for printing */
+pub trait ToDisplay {
+    fn to_display(&self, sep: &str) -> String;
+    }
+
+impl<T, U> ToDisplay for T
+where
+T: IntoIterator<Item = U> + Clone,
+U: ToString {
+    fn to_display(&self, sep: &str) -> String {
+        self.clone()
+            .into_iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join(sep)
         }
     }
 

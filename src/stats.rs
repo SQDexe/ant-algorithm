@@ -15,7 +15,8 @@ use {
             Write
             },
         path::Path
-        }
+        },
+    crate::tech::ToDisplay
     };
 
 /* A structure holding statistics of simulation's run, and operations needed for saving this data */
@@ -33,18 +34,18 @@ impl Stats {
         println!(
 "o> --- STATISTICS --- <o
 |        all reached goal: {}
-|    pheromones per point: {:?}
+|    pheromones per point: [{}]
 |    average route length: {}
-| satiated ants per phase: {:?}
+| satiated ants per phase: [{}]
 |  average routes per ant: {}
-|    pheromones per route: {:?}
+|    pheromones per route: [{}]
 o> ------------------ <o",
             self.completed,
-            self.pheromone_strengths,
+            self.pheromone_strengths.to_display(", "),
             self.average_route_len,
-            self.ants_per_phase,
+            self.ants_per_phase.to_display(", "),
             self.average_returns,
-            self.get_average_pheromone_strengths()
+            self.get_average_pheromone_strengths().to_display(", ")
             );
         }
 
