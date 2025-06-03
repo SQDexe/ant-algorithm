@@ -70,17 +70,17 @@ impl World {
     fn select_randomly(&self) -> usize
         { random_range(0 .. self.number_of_decision_points) }
     fn select_roulette(&self) -> usize {
-        let nodp = self.number_of_decision_points;
-        
-        let sum: f64 = self.auxils.iter()
-            .take(nodp)
-            .map(|auxil| auxil.ratio)
-            .sum();
+        let helper: Vec<f64> = {
+            let iter = self.auxils.iter()
+                .take(self.number_of_decision_points)
+                .map(|Auxil { ratio, ..}| ratio);
 
-        let helper: Vec<f64> = self.auxils.iter()
-            .take(nodp)
-            .map(|auxil| auxil.ratio / sum)
-            .collect();
+            let sum: f64 = iter.clone()
+                .sum();
+
+            iter.map(|ratio| ratio / sum)
+                .collect()
+            };
 
         let mut index = 0;
         let mut rest = helper[index];
@@ -295,7 +295,7 @@ impl WorldBuilder {
                 Dispersion::Relative => disperse::relative,
                 _ => |_, _| bias::UNKOWN
                 },
-            factor: self.factor.unwrap_or(bias::UNKOWN)
+            factor: self.factor?
             })
         }
 
