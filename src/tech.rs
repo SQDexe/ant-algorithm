@@ -1,16 +1,6 @@
-use {
-    clap::ValueEnum,
-    std::{
-        cell::{
-            Ref,
-            RefCell,
-            RefMut
-            },
-        rc::Rc
-        }
-    };
+use clap::ValueEnum;
 
-/* Print error, and exit macro */
+/* Technical stuff - print error, and exit macro */
 #[macro_export]
 macro_rules! error_exit {
     ( $code:literal, $fstr:expr $(, $arg:expr)* ) => {
@@ -19,7 +9,7 @@ macro_rules! error_exit {
         };
     }
 
-/* Handy assertion macro */
+/* Technical stuff - handy assertion macro */
 #[macro_export]
 macro_rules! assertion {
     ( $($boolean:expr), *) => {$(
@@ -29,7 +19,7 @@ macro_rules! assertion {
         )*};
     }
 
-/* Iterator zipping shortcut */
+/* Technical stuff - iterator zipping shortcut */
 #[macro_export]
 macro_rules! zip {
     ( mut $iter1:expr, $iter2:expr ) => {
@@ -46,7 +36,7 @@ macro_rules! zip {
         };
     }
 
-/* Derive Display trait for enums */
+/* Technical stuff - derive Display trait for enums */
 macro_rules! derive_enum_display {
     ( $enum:ident, $( $item:ident ),+ ) => {
         impl std::fmt::Display for $enum {
@@ -68,10 +58,10 @@ macro_rules! derive_enum_display {
         };
     }
 
-/* Shorthand for distance calculation function */
-pub type DistanceFunction = fn (i32, i32, i32, i32) -> f64;
+/* Technical stuff - alias for distance calculation function */
+pub type DistanceFunction = fn (i16, i16, i16, i16) -> f64;
 
-/* Ways of choosing next point */
+/* Technical stuff - type of next point selection enum */
 #[derive(Clone, Copy, ValueEnum)]
 pub enum Selection {
     Greedy,
@@ -81,7 +71,7 @@ pub enum Selection {
 
 derive_enum_display!(Selection, Greedy, Random, Roulette);
 
-/* Ways of calculating preference for the points:
+/* Technical stuff - ways of calculating preference for the points enum:
 P - Pheromone
 F - Food
 D - Distance
@@ -99,7 +89,7 @@ pub enum Preference {
 
 derive_enum_display!(Preference, Distance, Pheromone, Food, PD, FD, PF, PFD);
 
-/* Types of metrics for distance calculation */
+/* Technical stuff - types of metrics for distance calculation enum */
 #[derive(Clone, Copy, ValueEnum)]
 pub enum Metric {
     Chebyshev,
@@ -109,7 +99,7 @@ pub enum Metric {
 
 derive_enum_display!(Metric, Chebyshev, Euclidean, Taxicab);
 
-/* Types of pheromone dispersion */
+/* Technical stuff - types of pheromone dispersion enum */
 #[derive(Clone, Copy, ValueEnum)]
 pub enum Dispersion {
     None,
@@ -129,11 +119,11 @@ impl Dispersion {
 
 derive_enum_display!(Dispersion, None, Linear, Exponential, Relative);
 
-/* Holds data needed for constructing world's grid */
+/* Technical stuff - data holder needed for constructing world's grid */
 #[derive(Clone, Copy)]
 pub enum PointInfo {
-    Food(char, i32, i32, u32),
-    Empty(char, i32, i32)
+    Food(char, i16, i16, u32),
+    Empty(char, i16, i16)
     }
 
 impl PointInfo {
@@ -144,7 +134,7 @@ impl PointInfo {
             }
         }
 
-    pub const fn get_position(&self) -> (i32, i32) {
+    pub const fn get_position(&self) -> (i16, i16) {
         match self {
             &Self::Empty(_, x, y) => (x, y),
             &Self::Food(_, x, y, _) => (x, y)
@@ -167,7 +157,7 @@ impl PointInfo {
         }
     }
 
-/* Shortcut for Rust's robust if else */
+/* Technical stuff - alias for Rust's robust if else */
 pub trait BoolSelect<T> {
     fn select(&self, truthy: T, falsy: T) -> T;
     }
@@ -178,53 +168,16 @@ impl<T> BoolSelect<T> for bool {
         }
     }
 
-/* Collect data for printing */
-pub trait ToDisplay {
-    fn to_display(&self, sep: &str) -> String;
+/* Technical stuff - collect data for printing */
+pub trait ToDisplay: Iterator {
+    fn to_display(self, sep: &str) -> String;
     }
 
-impl<T, U> ToDisplay for T
-where
-T: IntoIterator<Item = U> + Clone,
-U: ToString {
-    fn to_display(&self, sep: &str) -> String {
-        self.clone()
-            .into_iter()
-            .map(|e| e.to_string())
+impl<T, I: Iterator<Item = T>> ToDisplay for I
+where T: ToString {
+    fn to_display(self, sep: &str) -> String {
+        self.map(|e| e.to_string())
             .collect::<Vec<_>>()
             .join(sep)
-        }
-    }
-
-/* name ideas:
-SmartPointer<T>
-RcRef<T>
-SmartCell<T>
-RefCountedCell<T>
-CountedMut<T>
-ChillCell<T>
-Cello<T>
-*/
-
-/* Technical stuff */
-pub struct SmartCell<T> (
-    Rc<RefCell<T>>
-    );
-
-impl<T> SmartCell<T> {
-    pub fn new(value: T) -> Self {
-        Self(Rc::new(RefCell::new(value)))
-        }
-
-    pub fn borrow(&self) -> Ref<T> {
-        self.0.borrow()
-        }
-
-    pub fn borrow_mut(&self) -> RefMut<T> {
-        self.0.borrow_mut()
-        }
-
-    pub fn clone(&self) -> Self {
-        SmartCell(Rc::clone(&self.0))
         }
     }

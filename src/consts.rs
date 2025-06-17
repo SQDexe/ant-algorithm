@@ -12,7 +12,7 @@ pub const GRID: [PointInfo; NUM_OF_POINTS] = [
     PointInfo::Food('g', 10, 8, 15)
     ];
 
-/* Default settings */
+/* Default simulation settings */
 pub mod default {
     use crate::tech::{
         Preference,
@@ -32,9 +32,10 @@ pub mod default {
     pub const METRIC: Metric = Metric::Euclidean;
     pub const DISPERSION: Dispersion = Dispersion::None;
     pub const QUIET: bool = false;
+    pub const BATCH_SIZE: usize = 1;
     }
 
-/*  */
+/* Values for different kinds of calculations */
 pub mod bias {
     pub const NEUTRAL: f64 = 1.0;
     pub const UNKOWN: f64 = f64::NAN;
@@ -71,6 +72,7 @@ format 'id,x,y[,food]'
 "Sets food at existing points during runtime,
 format 'cycle,id,amount'\n";
     pub const QUIET: &str = "Run program in quite mode";
+    pub const BATCH: &str = "Sets how many times to run the simulation\n";
     pub const OUTPUT: &str =
 "A file to write statistics to in JSON format,
 will create, or append/truncate existing file,

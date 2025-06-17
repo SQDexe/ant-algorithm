@@ -9,11 +9,11 @@ use {
         zip,
         consts::bias,
         tech::{
+            DistanceFunction,
+            PointInfo,
             BoolSelect,
             Dispersion,
-            DistanceFunction,
             Metric,
-            PointInfo,
             Preference,
             Selection
             },
@@ -37,15 +37,13 @@ macro_rules! find_point {
         $points.iter_mut()
             .find(|point| point.id == $id)
         };
-    ( into $points:expr, $id:ident ) => {
-        $points.into_iter()
-            .find(|point| point.id == $id)
-        };
     }
 
+/* World structure, for handling most of logic operations, and managing the grid */
 pub struct World {
     points: Vec<Point>,
     auxils: Vec<Auxil>,
+    foods: Vec<u32>,
     anthill_id: char,
     foodsource_ids: HashSet<char>,
     number_of_decision_points: usize,
@@ -53,13 +51,14 @@ pub struct World {
     consume_rate: u32,
     ants_return: bool,
     get_index_operation: fn (&Self) -> usize,
-    preference_operation: fn (&Point, i32, i32, DistanceFunction) -> f64,
+    preference_operation: fn (&Point, i16, i16, DistanceFunction) -> f64,
     distance_operation: DistanceFunction,
     disperse_operation: fn (&Point, f64) -> f64,
     factor: f64
     }
 
 impl World {
+    /* Get builder object */
     pub fn builder() -> WorldBuilder {
         WorldBuilder::default()
         }
@@ -70,62 +69,86 @@ impl World {
     fn select_randomly(&self) -> usize
         { random_range(0 .. self.number_of_decision_points) }
     fn select_roulette(&self) -> usize {
-        let helper: Vec<f64> = {
+        /* Get helper array */
+        let wheel: Vec<f64> = {
             let iter = self.auxils.iter()
                 .take(self.number_of_decision_points)
                 .map(|Auxil { ratio, ..}| ratio);
 
+            /* Sum ratios within range */
             let sum: f64 = iter.clone()
                 .sum();
 
+            /* Collect helper array into roulette wheel */
             iter.map(|ratio| ratio / sum)
                 .collect()
             };
 
+        /* First choice from the wheel */
         let mut index = 0;
-        let mut rest = helper[index];
+        let mut rest = wheel[index];
         
+        /* Select random chance */
         let chance = random();
 
+        /* Spin the wheel until it stops */
         while rest < chance {
             index += 1;
-            rest += helper[index];
+            rest += wheel[index];
             }
 
         index
         }
 
-    /* Logic methods */
+    /* Reset auxils in sync with points - the ratios are overwritten each time */
     fn reset_auxils(&mut self) {
         for (auxil, point) in zip!(mut self.auxils, self.points) {
             auxil.id = point.id
             }
         }
 
+    /* Sort auxils from biggest to smallest */
     fn sort_auxils(&mut self) {
         self.auxils.sort_unstable_by(|a, b|
             b.ratio.total_cmp(&a.ratio)
             );
         }
 
+    /* Set pheromones according to passed function */
     fn set_pheromones(&mut self, func: fn (&Point, f64) -> f64) {
         for point in &mut self.points {
             point.pheromone = func(point, self.factor).max(0.0)
             };
         }
 
+    /* Reset all pheromones to zero */
+    fn reset_pheromons(&mut self) {
+        self.set_pheromones(|_, _| 0.0);
+        }
+
+    /* Reset all foodsources to original state */
+    fn reset_points(&mut self) {
+        for (point, &food) in zip!(mut self.points, self.foods) {
+            point.food = food;
+            }
+        }
+
+    /* Create new position according to passed arguments */
     pub fn get_new_position(&mut self, position_id: char, visited: &str) -> char {
+        /* Clear the helper array */
         self.reset_auxils();
         
         if self.foodsource_ids.is_empty() {
             error_exit!(1, "!!! A problem occured while calculating postions - lack of foodsources !!!");
             }
 
+        /* Find current position's coordinates */
         let Some(&Point { x, y, .. }) = find_point!(self.points, position_id)
         else {
             error_exit!(1, "!!! A problem occured while calculating postions - recived an invalid point id: {} !!!", position_id);
             };
 
+        /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in zip!(mut self.auxils, self.points) {
             auxil.ratio = visited.contains(auxil.id).select(
                 bias::MINUTE,
@@ -133,17 +156,22 @@ impl World {
                 )
             };
 
+        /* Sort the helper array */
         self.sort_auxils();
 
+        /* Get first new guess */
         let mut choice = (self.get_index_operation)(self);
 
+        /* Double check, if not visited already */
         while visited.contains(self.auxils[choice].id) {
             choice = (self.get_index_operation)(self);
             }
         
+        /* Return id of new position */
         self.auxils[choice].id
         }
 
+    /* Cover the route with pheromones */
     pub fn cover_route(&mut self, visited: &str) {
         let cleared = visited.replace(self.anthill_id, "");
 
@@ -153,44 +181,49 @@ impl World {
             }
         }
 
-    pub fn reset_pheromons(&mut self) {
-        self.set_pheromones(|_, _| 0.0);
-        }
-
+    /* Reduce amount of pheromones according to the function */
     pub fn disperse_pheromons(&mut self) {
         self.set_pheromones(self.disperse_operation);
         }
 
+    /* Set amount of food at given point */
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
         let Some(point) = find_point!(mut self.points, position_id)
         else {
             error_exit!(1, "!!! A problem occured while updating points - recived an invalid point id: {} !!!", position_id);
             };
 
+        /* Assign the amount, and add to foodsource list */
         point.food = amount;
         self.foodsource_ids.insert(position_id);
         }
 
+    /* Decrease of food at given point */
     pub fn consume_foodsource(&mut self, position_id: char) {
         let Some(point) = find_point!(mut self.points, position_id)
         else {
             error_exit!(1, "!!! A problem occured while consuming food - recived an invalid point id: {} !!!", position_id);
             };
 
-        if let Some(amount) = point.food.checked_sub(self.consume_rate) {
-            point.food = amount;
-            if amount == 0 {
-                self.foodsource_ids.remove(&position_id);
-                }
-        } else {
-            error_exit!(1, "!!! A problem occured consuming food - tried consuming from an empty foodsource !!!");
+        /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
+        point.food = point.food.saturating_sub(self.consume_rate);
+        if point.food == 0 {
+            self.foodsource_ids.remove(&position_id);
             }
         }
 
+    /* Check whether the point is a foodsource */
     pub fn is_foodsource(&self, position_id: &char) -> bool { 
         self.foodsource_ids.contains(position_id)
         }
 
+    /* Reset points to original state */
+    pub fn reset(&mut self) {
+        self.reset_pheromons();
+        self.reset_points();
+        }
+
+    /* Show a table of states of all points */
     pub fn show(&self) {
         println!(
 "| o>--- world ---<o
@@ -203,9 +236,24 @@ impl World {
             );
         }
 
+    /* Show a table of coordinates of all points */
+    pub fn show_grid(&self) {
+        println!(
+"o> ---- GRID ---- <o
+{}o> -------------- <o",
+            self.points.iter()
+                .map(|Point { id, x, y, .. }|
+                    format!("| # {id}: ({x:>3},{y:>3})\n")
+                    )
+                .collect::<String>()
+            );
+        }
+
     /* Getters */
     pub fn get_anthill(&self) -> char
         { self.anthill_id }
+    pub fn get_number_of_points(&self) -> usize
+        { self.points.len() }
     pub fn do_ants_consume(&self) -> bool
         { self.consume_rate != 0 }
     pub fn do_ants_return(&self) -> bool
@@ -218,7 +266,7 @@ impl World {
     }
 
 
-/* Technical stuff */
+/* Technical stuff - World builder */
 #[derive(Default)]
 pub struct WorldBuilder {
     point_list: Option<Vec<PointInfo>>,
@@ -233,8 +281,9 @@ pub struct WorldBuilder {
     factor: Option<f64>,
     }
 
-/* Technical stuff - world builder */
+/* Technical stuff - World builder */
 impl WorldBuilder {
+    /* Technical stuff - World builder */
     pub fn build(self) -> Option<World> {
         let point_list = self.point_list?;
 
@@ -244,14 +293,14 @@ impl WorldBuilder {
 
         let foodsource_ids = HashSet::from_iter(
             point_list.iter()
-                .filter_map(|&point_info| match point_info {
-                    PointInfo::Food(.., 0) => None,
-                    PointInfo::Food(id, ..) => Some(id),
+                .filter_map(|point_info| match point_info {
+                    &PointInfo::Food(.., 0) => None,
+                    &PointInfo::Food(id, ..) => Some(id),
                     _ => None
                     })
             );
 
-        let (points, auxils) = point_list.into_iter()
+        let (points, auxils): (Vec<_>, Vec<_>) = point_list.into_iter()
             .map(|point_info| (
                 match point_info {
                     PointInfo::Empty(id, x, y) => Point::new(id, x, y, 0),
@@ -261,9 +310,14 @@ impl WorldBuilder {
                 ))
             .unzip();
 
-        Some(World {
+        let foods = points.iter()
+            .map(|point| point.food)
+            .collect();
+
+        let world = World {
             points,
             auxils,
+            foods,
             anthill_id,
             foodsource_ids,
             number_of_decision_points: self.number_of_decision_points?,
@@ -296,7 +350,9 @@ impl WorldBuilder {
                 _ => |_, _| bias::UNKOWN
                 },
             factor: self.factor?
-            })
+            };
+
+        Some(world)
         }
 
     /* Setters */

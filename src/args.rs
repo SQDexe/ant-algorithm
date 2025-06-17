@@ -20,7 +20,7 @@ use {
         }
     };
 
-/* Technical stuff */
+/* Technical stuff - parsing, and storing of the CL arguments */
 #[derive(Parser)]
 #[command(version, about)]
 pub struct Args {
@@ -57,15 +57,18 @@ pub struct Args {
 
     #[clap(short, long, action, default_value_t = default::QUIET, help = tips::QUIET)]
     pub quiet: bool,
+    #[clap(short, long, default_value_t = default::BATCH_SIZE, help = tips::BATCH)]
+    pub batch: usize,
     #[clap(short, long, help = tips::OUTPUT)]
     pub output: Option<String>
     }
 
-/* Technical stuff */
+/* Technical stuff - aliases of some types */
 type GenericError = Box<dyn Error + Send + Sync>;
 type Action = (usize, char, u32);
 type Pair = (char, u32);
 
+/* Technical stuff - grid argument parser */
 #[derive(Clone)]
 pub struct GridTable (
     Vec<PointInfo>
@@ -81,15 +84,16 @@ impl FromStr for GridTable {
     type Err = GenericError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(GridTable (
+        let table = Self (
             s.split(';')
-                .filter_map(|e| match e.split(',').collect::<Vec<&str>>()[..] {
-                    [id, x, y] => Some(PointInfo::Empty(
+                .map(|e| e.split(',').collect::<Vec<_>>())
+                .filter_map(|e| match e.as_slice() {
+                    &[id, x, y] => Some(PointInfo::Empty(
                         id.parse().ok()?,
                         x.parse().ok()?,
                         y.parse().ok()?
                         )),
-                    [id, x, y, food] => Some(PointInfo::Food(
+                    &[id, x, y, food] => Some(PointInfo::Food(
                         id.parse().ok()?,
                         x.parse().ok()?,
                         y.parse().ok()?,
@@ -98,10 +102,13 @@ impl FromStr for GridTable {
                     _ => None
                     })
                 .collect()
-            ))
+            );
+
+        Ok(table)
         }
     }
 
+/* Technical stuff - actions arguments parser */
 #[derive(Clone)]
 pub struct ActionTable (
     Vec<Action>
@@ -111,15 +118,11 @@ impl ActionTable {
     pub fn build(self) -> HashMap<usize, Vec<Pair>> {
         let mut rest: HashMap<usize, Vec<Pair>> = HashMap::new();
 
-        self.0.into_iter()
-            .for_each(|(cycle, id, amount)| {
-            let pair = (id, amount);
-            if let Some(points) = rest.get_mut(&cycle) {
-                points.push(pair);
-            } else {
-                rest.insert(cycle, Vec::from([pair]));
-                }
-            });
+        for (cycle, id, amount) in self.0.into_iter() {
+            rest.entry(cycle)
+                .or_default()
+                .push((id, amount));
+            }
 
         rest
         }
@@ -129,10 +132,11 @@ impl FromStr for ActionTable {
     type Err = GenericError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(ActionTable (
+        let table = Self (
             s.split(';')
-                .filter_map(|e| match e.split(',').collect::<Vec<&str>>()[..] {
-                    [cycle, id, amount] => Some((
+                .map(|e| e.split(',').collect::<Vec<_>>())
+                .filter_map(|e| match e.as_slice() {
+                    &[cycle, id, amount] => Some((
                         cycle.parse().ok()?,
                         id.parse().ok()?,
                         amount.parse().ok()?
@@ -140,6 +144,8 @@ impl FromStr for ActionTable {
                     _ => None
                     })
                 .collect()
-            ))
+            );
+
+        Ok(table)
         }
     }

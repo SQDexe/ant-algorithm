@@ -1,42 +1,49 @@
 use {
-    std::iter::repeat_with,
+    std::{
+        cell::RefCell,
+        iter::repeat_with,
+        rc::Rc
+        },
     crate::{
         ant::Ant,
-        tech::SmartCell,
         world::World
         }
     };
 
+/* Anthill strucutre, for handling Ant operations */
 pub struct AntHill {
     number_of_ants: usize,
     ants: Vec<Ant>
     }
 
 impl AntHill {
-    pub fn new(world_cell: &SmartCell<World>, number_of_ants: usize) -> Self {
+    /* Constructor */
+    pub fn new(world_cell: &Rc<RefCell<World>>, number_of_ants: usize) -> Self {
         let anthill = world_cell.borrow()
             .get_anthill();
 
-        AntHill {
+        Self {
             number_of_ants,
-            ants: repeat_with(|| Ant::new(anthill, world_cell.clone()))
+            ants: repeat_with(|| Ant::new(anthill, Rc::clone(world_cell)))
                 .take(number_of_ants)
                 .collect()
             }
         }
 
-    /* Logic methods */
+    /* Make all unsatiated ants take action */
     pub fn action(&mut self) {
         self.ants.iter_mut()
             .filter(|ant| ! ant.is_satiated())
             .for_each(Ant::action);
         }
 
+    /* Reset all ants */
     pub fn reset(&mut self) {
         self.ants.iter_mut()
             .for_each(Ant::reset);
         }
 
+    /* Show a table of state of all ants */
     pub fn show(&self) {
         println!(
 "| o>------- ants -------<o
