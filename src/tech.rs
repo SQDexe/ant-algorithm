@@ -1,5 +1,3 @@
-use clap::ValueEnum;
-
 /* Technical stuff - print error, and exit macro */
 #[macro_export]
 macro_rules! error_exit {
@@ -62,7 +60,7 @@ macro_rules! derive_enum_display {
 pub type DistanceFunction = fn (i16, i16, i16, i16) -> f64;
 
 /* Technical stuff - type of next point selection enum */
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Selection {
     Greedy,
     Random,
@@ -76,7 +74,7 @@ P - Pheromone
 F - Food
 D - Distance
 */
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Preference {
     Distance,
     Pheromone,
@@ -90,7 +88,7 @@ pub enum Preference {
 derive_enum_display!(Preference, Distance, Pheromone, Food, PD, FD, PF, PFD);
 
 /* Technical stuff - types of metrics for distance calculation enum */
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Metric {
     Chebyshev,
     Euclidean,
@@ -100,7 +98,7 @@ pub enum Metric {
 derive_enum_display!(Metric, Chebyshev, Euclidean, Taxicab);
 
 /* Technical stuff - types of pheromone dispersion enum */
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Dispersion {
     None,
     Linear,

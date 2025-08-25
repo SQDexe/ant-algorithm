@@ -24,7 +24,7 @@ impl AntHill {
 
         Self {
             number_of_ants,
-            ants: repeat_with(|| Ant::new(anthill, Rc::clone(world_cell)))
+            ants: repeat_with(|| Ant::new(anthill, world_cell.clone()))
                 .take(number_of_ants)
                 .collect()
             }

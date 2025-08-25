@@ -134,9 +134,15 @@ impl World {
         }
 
     /* Create new position according to passed arguments */
-    pub fn get_new_position(&mut self, position_id: char, visited: &str) -> char {
+    pub fn get_new_position(&mut self, visited: &str) -> char {
         /* Clear the helper array */
         self.reset_auxils();
+
+        /* Get current postion */
+        let Some(position_id) = visited.chars().last()
+        else {
+            error_exit!(1, "!!! A problem occured while calculating postions - got empty route !!!");
+            };
         
         if self.foodsource_ids.is_empty() {
             error_exit!(1, "!!! A problem occured while calculating postions - lack of foodsources !!!");
@@ -150,9 +156,10 @@ impl World {
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in zip!(mut self.auxils, self.points) {
-            auxil.ratio = visited.contains(auxil.id).select(
-                bias::MINUTE,
-                (self.preference_operation)(point, x, y, self.distance_operation)
+            let viable = ! visited.contains(auxil.id) || self.foodsource_ids.contains(&position_id);
+            auxil.ratio = viable.select(
+                (self.preference_operation)(point, x, y, self.distance_operation),
+                bias::MINUTE
                 )
             };
 
@@ -250,13 +257,13 @@ impl World {
         }
 
     /* Getters */
-    pub fn get_anthill(&self) -> char
+    pub const fn get_anthill(&self) -> char
         { self.anthill_id }
-    pub fn get_number_of_points(&self) -> usize
+    pub const fn get_number_of_points(&self) -> usize
         { self.points.len() }
-    pub fn do_ants_consume(&self) -> bool
+    pub const fn do_ants_consume(&self) -> bool
         { self.consume_rate != 0 }
-    pub fn do_ants_return(&self) -> bool
+    pub const fn do_ants_return(&self) -> bool
         { self.ants_return }
     pub fn get_pheromones_per_point(&self) -> Vec<f64> {
         self.points.iter()
@@ -360,35 +367,35 @@ impl WorldBuilder {
         self.point_list = Some(point_list);
         self
         }
-    pub fn decision_points(mut self, number_of_decision_points: usize) -> Self {
+    pub const fn decision_points(mut self, number_of_decision_points: usize) -> Self {
         self.number_of_decision_points = Some(number_of_decision_points);
         self
         }
-    pub fn pheromone(mut self, pheromone: f64) -> Self {
+    pub const fn pheromone(mut self, pheromone: f64) -> Self {
         self.pheromone = Some(pheromone);
         self
         }
-    pub fn ants_return(mut self, ants_return: bool) -> Self {
+    pub const fn ants_return(mut self, ants_return: bool) -> Self {
         self.ants_return = Some(ants_return);
         self
         }
-    pub fn consume_rate(mut self, consume_rate: u32) -> Self {
+    pub const fn consume_rate(mut self, consume_rate: u32) -> Self {
         self.consume_rate = Some(consume_rate);
         self
         }
-    pub fn select_method(mut self, select_method: Selection) -> Self {
+    pub const fn select_method(mut self, select_method: Selection) -> Self {
         self.select_method = Some(select_method);
         self
         }
-    pub fn point_preference(mut self, point_preference: Preference) -> Self {
+    pub const fn point_preference(mut self, point_preference: Preference) -> Self {
         self.point_preference = Some(point_preference);
         self
         }
-    pub fn metric(mut self, metric: Metric) -> Self {
+    pub const fn metric(mut self, metric: Metric) -> Self {
         self.metric = Some(metric);
         self
         }
-    pub fn dispersion_factor(mut self, dispersion_method: Dispersion, factor: f64) -> Self {
+    pub const fn dispersion_factor(mut self, dispersion_method: Dispersion, factor: f64) -> Self {
         self.dispersion_method = Some(dispersion_method);
         self.factor = Some(factor);
         self

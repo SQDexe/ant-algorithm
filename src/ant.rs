@@ -9,7 +9,6 @@ use {
 /* Ant structure, basic logical unit */
 pub struct Ant {
     world_cell: Rc<RefCell<World>>,
-    position_id: char,
     satiated: bool,
     route: String,
     routes_counter: usize
@@ -20,7 +19,6 @@ impl Ant {
     pub fn new(anthill_id: char, world_cell: Rc<RefCell<World>>) -> Self {
         Self {
             world_cell,
-            position_id: anthill_id,
             satiated: false,
             route: anthill_id.to_string(),
             routes_counter: 0
@@ -38,7 +36,7 @@ impl Ant {
             let mut world = self.world_cell.borrow_mut();
 
             /* Get new position, and check if it's a foodsource */
-            let new_position = world.get_new_position(self.position_id, &self.route);
+            let new_position = world.get_new_position(&self.route);
             let food_reached = world.is_foodsource(&new_position);
 
             ( new_position, food_reached,
@@ -46,21 +44,22 @@ impl Ant {
             };
         
         /* Update current position, and path */
-        self.position_id = new_position;
         self.route.push(new_position);
         
         /* Actions taken upon reaching a foodsource */
         if food_reached {
             /* Mark ant as satiated, and cover the route */
+            let mut world_cell = self.world_cell.borrow_mut();
             self.satiated = true;
-            self.world_cell.borrow_mut()
-                .cover_route(&self.route);
+            world_cell.cover_route(&self.route);
 
             /* If ants consume, consume the foodsource */
             if consume {
-                self.world_cell.borrow_mut()
-                    .consume_foodsource(new_position);
+                world_cell.consume_foodsource(new_position);
                 }
+
+            /* Early drop to avoid conflicts */
+            drop(world_cell);
 
             /* If ants return, reset position, and increment the counter */
             if returns {
@@ -76,7 +75,6 @@ impl Ant {
             .get_anthill();
 
         self.satiated = false;
-        self.position_id = anthill;
         self.route = anthill.to_string();
         }
 
@@ -87,12 +85,12 @@ impl Ant {
         }
 
     /* Getters */
-    pub fn is_satiated(&self) -> bool
+    pub const fn is_satiated(&self) -> bool
         { self.satiated }
     pub fn get_route(&self) -> &str
         { &self.route }
-    pub fn get_route_length(&self) -> usize
+    pub const fn get_route_length(&self) -> usize
         { self.route.len() }
-    pub fn get_routes_count(&self) -> usize
+    pub const fn get_routes_count(&self) -> usize
         { self.routes_counter }
     }

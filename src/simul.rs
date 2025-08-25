@@ -410,7 +410,7 @@ struct Config {
     }
 
 impl Config {
-    pub fn show(&self) {
+    fn show(&self) {
         println!(
 "o> -------- SETTINGS -------- <o
 |            cycles: {}
@@ -436,15 +436,15 @@ o> -------------------------- <o",
 /* Technical stuff - structure for holding statistics of simulation's run, and operations needed for saving this data */
 #[derive(Default, Deserialize, Serialize)]
 struct Stats {
-    pub completed: bool,
-    pub pheromone_strengths: Vec<f64>,
-    pub average_route_len: f64,
-    pub ants_per_phase: Vec<usize>,
-    pub average_returns: f64
+    completed: bool,
+    pheromone_strengths: Vec<f64>,
+    average_route_len: f64,
+    ants_per_phase: Vec<usize>,
+    average_returns: f64
     }
 
 impl Stats {
-    pub fn get_pheromone_per_route(&self) -> Vec<f64> {
+    fn get_pheromone_per_route(&self) -> Vec<f64> {
         self.pheromone_strengths.iter()
             .map(|phero| phero / self.average_returns)
             .collect()

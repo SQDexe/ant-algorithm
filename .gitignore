@@ -2,6 +2,6 @@
 /target
 *.lock
 
-# Git
+# Env
 /.git
 /.vscode
