@@ -1,4 +1,5 @@
 use {
+    anyhow::Result as DynResult,
     serde::{
         Deserialize,
         Serialize
@@ -13,7 +14,6 @@ use {
             HashMap,
             HashSet
             },
-        error::Error,
         fs::File,
         io::{
             Read,
@@ -364,7 +364,7 @@ o> ------------------------------ <o",
         }
 
     /* Write statistics to file */
-    pub fn write_to_file(&mut self, absolute_path: &Path) -> Result<(), Box<dyn Error>> {
+    pub fn write_to_file(&mut self, absolute_path: &Path) -> DynResult<()> {
         /* EMpty statistics container */
         let mut data = Vec::with_capacity(self.batch_size);
         

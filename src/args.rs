@@ -1,8 +1,12 @@
 use {
+    anyhow::{
+        anyhow,
+        Result as DynResult,
+        Error
+        },
     clap::Parser,
     std::{
         collections::HashMap,
-        error::Error,
         str::FromStr
         },
     crate::{
@@ -64,7 +68,6 @@ pub struct Args {
     }
 
 /* Technical stuff - aliases of some types */
-type GenericError = Box<dyn Error + Send + Sync>;
 type Action = (usize, char, u32);
 type Pair = (char, u32);
 
@@ -78,33 +81,36 @@ impl GridTable {
     pub fn build(self) -> Vec<PointInfo> {
         self.0
         }
+
+    fn parse_line(line: &str) -> DynResult<PointInfo> {
+        let parts: Vec<_> = line.split(',').collect();
+        match parts.as_slice() {
+            &[id, x, y] => Ok(PointInfo::Empty(
+                id.parse()?,
+                x.parse()?,
+                y.parse()?
+                )),
+            &[id, x, y, food] => Ok(PointInfo::Food(
+                id.parse()?,
+                x.parse()?,
+                y.parse()?,
+                food.parse()?
+                )),
+            _ => Err(anyhow!("Parsing failed"))
+            }
+
+        }
     }
 
 impl FromStr for GridTable {
-    type Err = GenericError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let table = Self (
+    fn from_str(s: &str) -> DynResult<Self> {
+        Ok(Self (
             s.split(';')
-                .map(|e| e.split(',').collect::<Vec<_>>())
-                .filter_map(|e| match e.as_slice() {
-                    &[id, x, y] => Some(PointInfo::Empty(
-                        id.parse().ok()?,
-                        x.parse().ok()?,
-                        y.parse().ok()?
-                        )),
-                    &[id, x, y, food] => Some(PointInfo::Food(
-                        id.parse().ok()?,
-                        x.parse().ok()?,
-                        y.parse().ok()?,
-                        food.parse().ok()?
-                        )),
-                    _ => None
-                    })
+                .filter_map(|e| Self::parse_line(e).ok())
                 .collect()
-            );
-
-        Ok(table)
+            ))
         }
     }
 
@@ -126,26 +132,28 @@ impl ActionTable {
 
         rest
         }
+
+    fn parse_line(line: &str) -> DynResult<Action> {
+        let parts: Vec<_> = line.split(',').collect();
+        match parts.as_slice() {
+            &[cycle, id, amount] => Ok((
+                cycle.parse()?,
+                id.parse()?,
+                amount.parse()?
+                )),
+            _ => Err(anyhow!("Parsing failed"))
+            }
+        }
     }
 
 impl FromStr for ActionTable {
-    type Err = GenericError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let table = Self (
+    fn from_str(s: &str) -> DynResult<Self> {
+        Ok(Self (
             s.split(';')
-                .map(|e| e.split(',').collect::<Vec<_>>())
-                .filter_map(|e| match e.as_slice() {
-                    &[cycle, id, amount] => Some((
-                        cycle.parse().ok()?,
-                        id.parse().ok()?,
-                        amount.parse().ok()?
-                        )),
-                    _ => None
-                    })
+                .filter_map(|e| Self::parse_line(e).ok())
                 .collect()
-            );
-
-        Ok(table)
+            ))
         }
     }
