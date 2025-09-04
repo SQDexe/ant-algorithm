@@ -64,6 +64,7 @@ impl World {
         }
 
     /* Selection methods */
+    #[inline]
     const fn select_greedy(&self) -> usize
         { 0 }
     fn select_randomly(&self) -> usize
@@ -257,12 +258,16 @@ impl World {
         }
 
     /* Getters */
+    #[inline]
     pub const fn get_anthill(&self) -> char
         { self.anthill_id }
+    #[inline]
     pub const fn get_number_of_points(&self) -> usize
         { self.points.len() }
+    #[inline]
     pub const fn do_ants_consume(&self) -> bool
         { self.consume_rate != 0 }
+    #[inline]
     pub const fn do_ants_return(&self) -> bool
         { self.ants_return }
     pub fn get_pheromones_per_point(&self) -> Vec<f64> {

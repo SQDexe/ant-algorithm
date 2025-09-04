@@ -107,6 +107,7 @@ pub enum Dispersion {
     }
 
 impl Dispersion {
+    #[inline]
     pub const fn is_set(&self) -> bool {
         match self {
             Dispersion::None => false,
@@ -125,6 +126,7 @@ pub enum PointInfo {
     }
 
 impl PointInfo {
+    #[inline]
     pub const fn get_id(&self) -> char {
         match self {
             &Self::Empty(id, ..) => id,
@@ -132,6 +134,7 @@ impl PointInfo {
             }
         }
 
+    #[inline]
     pub const fn get_position(&self) -> (i16, i16) {
         match self {
             &Self::Empty(_, x, y) => (x, y),
@@ -139,6 +142,7 @@ impl PointInfo {
             }
         }
 
+    #[inline]
     pub const fn has_food(&self) -> bool {
         match self {
             &Self::Empty(..) => false,
@@ -147,6 +151,7 @@ impl PointInfo {
             }
         }
 
+    #[inline]
     pub const fn get_food(&self) -> u32 {
         match self {
             &Self::Food(.. , amount) => amount,

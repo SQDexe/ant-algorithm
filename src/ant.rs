@@ -85,12 +85,16 @@ impl Ant {
         }
 
     /* Getters */
+    #[inline]
     pub const fn is_satiated(&self) -> bool
         { self.satiated }
+    #[inline]
     pub fn get_route(&self) -> &str
         { &self.route }
+    #[inline]
     pub const fn get_route_length(&self) -> usize
         { self.route.len() }
+    #[inline]
     pub const fn get_routes_count(&self) -> usize
         { self.routes_counter }
     }

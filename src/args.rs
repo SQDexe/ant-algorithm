@@ -78,6 +78,7 @@ pub struct GridTable (
     );
 
 impl GridTable {
+    #[inline]
     pub fn build(self) -> Vec<PointInfo> {
         self.0
         }

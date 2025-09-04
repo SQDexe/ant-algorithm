@@ -16,10 +16,13 @@ pub mod distance {
 pub mod disperse {
     use crate::utils::Point;
 
+    #[inline]
     pub const fn linear(point: &Point, factor: f64) -> f64
         { point.pheromone - factor }
+    #[inline]
     pub const fn exponential(point: &Point, factor: f64) -> f64
         { point.pheromone / factor }
+    #[inline]
     pub const fn relative(point: &Point, factor: f64) -> f64
         { point.pheromone * (1.0 - factor) }
     }
@@ -58,6 +61,7 @@ pub struct Point {
     }
 
 impl Point {
+    #[inline]
     pub const fn new(id: char, x: i16, y: i16, food: u32) -> Self {
         Point { id, x, y, food, pheromone: 0.0 }
         }
@@ -70,6 +74,7 @@ pub struct Auxil {
     }
 
 impl Auxil {
+    #[inline]
     pub const fn new(id: char, ratio: f64) -> Self {
         Auxil { id, ratio }
         }
