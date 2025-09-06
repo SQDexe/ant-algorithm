@@ -2,8 +2,11 @@
 name = "ant-algorithm"
 version = "1.3.7"
 edition = "2024"
-authors = ["SQD.exe"]
 description = "A Rust reimplementation of Generic Ant Algorithm"
+authors = ["SQD.exe"]
+repository = "https://github.com/SQDexe/ant-algorithm"
+readme = "README.md"
+license = "Unlicense"
 
 [dependencies]
 anyhow = "1.0.99"
