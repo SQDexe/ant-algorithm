@@ -10,10 +10,7 @@ use {
         str::FromStr
         },
     crate::{
-        consts::{
-            default,
-            tips
-            },
+        consts::default,
         tech::{
             Dispersion,
             Metric,
@@ -26,44 +23,71 @@ use {
 
 /* Technical stuff - parsing, and storing of the CL arguments */
 #[derive(Parser)]
-#[command(version, about)]
+#[command(author, version, about)]
 pub struct Args {
-    #[clap(short, long, default_value_t = default::NUM_OF_CYCLES, help = tips::CYCLES)]
+    /// Sets number of cycles
+    #[clap(short, long, default_value_t = default::NUM_OF_CYCLES, long_help)]
     pub cycles: usize,
-    #[clap(short, long, default_value_t = default::NUM_OF_ANTS, help = tips::ANTS)]
+    /// Sets number of ants
+    #[clap(short, long, default_value_t = default::NUM_OF_ANTS)]
     pub ants: usize,
-    #[clap(short, long, default_value_t = default::PHERO_STRENGTH, help = tips::PHEROMONE)]
+    /// Sets the strength of pheromones
+    #[clap(short, long, default_value_t = default::PHERO_STRENGTH)]
     pub pheromone: f64,
-    #[clap(short, long, default_value_t = default::NUM_OF_DECISION_POINTS, help = tips::DECISION)]
+    /// Sets the number of decision points
+    #[clap(short, long, default_value_t = default::NUM_OF_DECISION_POINTS)]
     pub decision: usize,
 
-    #[clap(short, long, default_value_t = default::CONSUME_RATE, help = tips::RATE)]
+    /// Sets whether, and how much food is consumed
+    #[clap(short, long, default_value_t = default::CONSUME_RATE)]
     pub rate: u32,
-    #[clap(short = 'R', long, action, default_value_t = default::RETURN_BEHAVIOUR, help = tips::RETURNS)]
+    /// Sets whether ants return to the anthill
+    #[clap(short = 'R', long, action, default_value_t = default::RETURN_BEHAVIOUR)]
     pub returns: bool,
 
-    #[clap(short = 'S', long, value_enum, default_value_t = default::SELECT_METHOD, help = tips::SELECT)]
+    /// Sets how points are selected
+    #[clap(short = 'S', long, value_enum, default_value_t = default::SELECT_METHOD)]
     pub select: Selection,
-    #[clap(short = 'P', long, value_enum, default_value_t = default::PREFERENCE_METHOD, help = tips::PREFERENCE)]
+    /// Sets how the point preference is calculated
+    #[clap(short = 'P', long, value_enum, default_value_t = default::PREFERENCE_METHOD)]
     pub preference: Preference,
-    #[clap(short = 'M', long, value_enum, default_value_t = default::METRIC, help = tips::METRIC)]
+    /// Sets how the distance between points is calculated
+    #[clap(short = 'M', long, value_enum, default_value_t = default::METRIC)]
     pub metric: Metric,
 
-    #[clap(short = 'D', long, value_enum, requires = "factor", default_value_t = default::DISPERSION, help = tips::DISPERSION)]
+    /// Sets the dispersion mode
+    #[clap(short = 'D', long, value_enum, requires = "factor", default_value_t = default::DISPERSION)]
     pub dispersion: Dispersion,
-    #[clap(short = 'f', long, help = tips::FACTOR)]
+    /// Sets the coefficient of the dispersion,
+    /// linear      - 0 <= factor,
+    /// exponential - 1 <= factor,
+    /// relative    - 0 <= factor <= 1
+    #[clap(short = 'f', long, requires = "dispersion", verbatim_doc_comment)]
     pub factor: Option<f64>,
     
-    #[clap(short = 'G', long, help = tips::GRID)]
+    /// Sets new world grid,
+    /// must contain at least 2 points,
+    /// the first point is automatically chosen as anthill,
+    /// format 'id,x,y[,food]'
+    /// 
+    /// [default: a,6,1;b,13,1;c,4,3;d,4,5;e,8,5;f,6,8;g,10,8,15]
+    #[clap(short = 'G', long, verbatim_doc_comment)]
     pub grid: Option<GridTable>,
-    #[clap(short = 'A', long, help = tips::ACTIONS)]
+    /// Sets food at existing points during runtime,
+    /// format 'cycle,id,amount'
+    #[clap(short = 'A', long, verbatim_doc_comment)]
     pub actions: Option<ActionTable>,
 
-    #[clap(short, long, action, default_value_t = default::QUIET, help = tips::QUIET)]
+    /// Run program in quite mode
+    #[clap(short, long, action, default_value_t = default::QUIET)]
     pub quiet: bool,
-    #[clap(short, long, default_value_t = default::BATCH_SIZE, help = tips::BATCH)]
+    /// Sets how many times to run the simulation
+    #[clap(short, long, default_value_t = default::BATCH_SIZE)]
     pub batch: usize,
-    #[clap(short, long, help = tips::OUTPUT)]
+    /// A file to write statistics to in JSON format,
+    /// will create, or append/truncate existing file,
+    /// search path from current working directory
+    #[clap(short, long, verbatim_doc_comment)]
     pub output: Option<String>
     }
 
@@ -84,14 +108,14 @@ impl GridTable {
         }
 
     fn parse_line(line: &str) -> DynResult<PointInfo> {
-        let parts: Vec<_> = line.split(',').collect();
-        match parts.as_slice() {
-            &[id, x, y] => Ok(PointInfo::Empty(
+        let parts: Box<[_]> = line.split(',').collect();
+        match parts[..] {
+            [id, x, y] => Ok(PointInfo::Empty(
                 id.parse()?,
                 x.parse()?,
                 y.parse()?
                 )),
-            &[id, x, y, food] => Ok(PointInfo::Food(
+            [id, x, y, food] => Ok(PointInfo::Food(
                 id.parse()?,
                 x.parse()?,
                 y.parse()?,
@@ -135,9 +159,9 @@ impl ActionTable {
         }
 
     fn parse_line(line: &str) -> DynResult<Action> {
-        let parts: Vec<_> = line.split(',').collect();
-        match parts.as_slice() {
-            &[cycle, id, amount] => Ok((
+        let parts: Box<[_]> = line.split(',').collect();
+        match parts[..] {
+            [cycle, id, amount] => Ok((
                 cycle.parse()?,
                 id.parse()?,
                 amount.parse()?
