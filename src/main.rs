@@ -12,10 +12,9 @@ mod tech;
 
 use {
     clap::Parser,
-    std::env::current_dir,
     crate::{
         args::Args,
-        simul::Simulator,
+        simul::Simulator
         }
     };
 
@@ -34,17 +33,11 @@ fn main() {
     simulation.show();
 
     /* Save statistics to a file */
-    if let Some(filename) = output {
-        /* Get current working directory */
-        if let Ok(cwd) = current_dir() {
-            /* Try to save statistics */
-            if simulation.write_to_file(cwd.join(&filename).as_path()).is_ok() {
-                println!("### Statistics saved in '{filename}' ###");
-            } else {
-                eprintln!("!!! A problem occured while trying to save the statistics !!!");
-                }
-        } else {
-            eprintln!("!!! A problem occured while trying to get the current working directory !!!");
+    if let Some(path) = output {        
+        /* Try to save statistics */
+        match simulation.write_to_file(&path) {
+            Ok(_) => println!("### Statistics saved in '{}' ###", path.display()),
+            _ => eprintln!("!!! A problem occured while trying to save the statistics !!!")
             }
         }
     }

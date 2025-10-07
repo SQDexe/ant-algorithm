@@ -1,8 +1,8 @@
 use {
-    std::{
+    std::rc::Rc,
+    core::{
         cell::RefCell,
         iter::repeat_with,
-        rc::Rc
         },
     crate::{
         ant::Ant,

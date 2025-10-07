@@ -1,14 +1,6 @@
 use {
-    anyhow::{
-        anyhow,
-        Result as DynResult,
-        Error
-        },
     clap::Parser,
-    std::{
-        collections::HashMap,
-        str::FromStr
-        },
+    std::path::PathBuf,
     crate::{
         consts::default,
         tech::{
@@ -16,6 +8,7 @@ use {
             Metric,
             Preference,
             Selection,
+            Action,
             PointInfo
             }
         }
@@ -26,7 +19,7 @@ use {
 #[command(author, version, about)]
 pub struct Args {
     /// Sets number of cycles
-    #[clap(short, long, default_value_t = default::NUM_OF_CYCLES, long_help)]
+    #[clap(short, long, default_value_t = default::NUM_OF_CYCLES)]
     pub cycles: usize,
     /// Sets number of ants
     #[clap(short, long, default_value_t = default::NUM_OF_ANTS)]
@@ -71,12 +64,12 @@ pub struct Args {
     /// format 'id,x,y[,food]'
     /// 
     /// [default: a,6,1;b,13,1;c,4,3;d,4,5;e,8,5;f,6,8;g,10,8,15]
-    #[clap(short = 'G', long, verbatim_doc_comment)]
-    pub grid: Option<GridTable>,
+    #[clap(short = 'G', long, value_delimiter = ';', verbatim_doc_comment)]
+    pub grid: Option<Vec<PointInfo>>,
     /// Sets food at existing points during runtime,
     /// format 'cycle,id,amount'
-    #[clap(short = 'A', long, verbatim_doc_comment)]
-    pub actions: Option<ActionTable>,
+    #[clap(short = 'A', long, value_delimiter = ';', verbatim_doc_comment)]
+    pub actions: Option<Vec<Action>>,
 
     /// Run program in quite mode
     #[clap(short, long, action, default_value_t = default::QUIET)]
@@ -88,97 +81,5 @@ pub struct Args {
     /// will create, or append/truncate existing file,
     /// search path from current working directory
     #[clap(short, long, verbatim_doc_comment)]
-    pub output: Option<String>
-    }
-
-/* Technical stuff - aliases of some types */
-type Action = (usize, char, u32);
-type Pair = (char, u32);
-
-/* Technical stuff - grid argument parser */
-#[derive(Clone)]
-pub struct GridTable (
-    Vec<PointInfo>
-    );
-
-impl GridTable {
-    #[inline]
-    pub fn build(self) -> Vec<PointInfo> {
-        self.0
-        }
-
-    fn parse_line(line: &str) -> DynResult<PointInfo> {
-        let parts: Box<[_]> = line.split(',').collect();
-        match parts[..] {
-            [id, x, y] => Ok(PointInfo::Empty(
-                id.parse()?,
-                x.parse()?,
-                y.parse()?
-                )),
-            [id, x, y, food] => Ok(PointInfo::Food(
-                id.parse()?,
-                x.parse()?,
-                y.parse()?,
-                food.parse()?
-                )),
-            _ => Err(anyhow!("Parsing failed"))
-            }
-
-        }
-    }
-
-impl FromStr for GridTable {
-    type Err = Error;
-
-    fn from_str(s: &str) -> DynResult<Self> {
-        Ok(Self (
-            s.split(';')
-                .filter_map(|e| Self::parse_line(e).ok())
-                .collect()
-            ))
-        }
-    }
-
-/* Technical stuff - actions arguments parser */
-#[derive(Clone)]
-pub struct ActionTable (
-    Vec<Action>
-    );
-
-impl ActionTable {
-    pub fn build(self) -> HashMap<usize, Vec<Pair>> {
-        let mut rest: HashMap<usize, Vec<Pair>> = HashMap::new();
-
-        for (cycle, id, amount) in self.0.into_iter() {
-            rest.entry(cycle)
-                .or_default()
-                .push((id, amount));
-            }
-
-        rest
-        }
-
-    fn parse_line(line: &str) -> DynResult<Action> {
-        let parts: Box<[_]> = line.split(',').collect();
-        match parts[..] {
-            [cycle, id, amount] => Ok((
-                cycle.parse()?,
-                id.parse()?,
-                amount.parse()?
-                )),
-            _ => Err(anyhow!("Parsing failed"))
-            }
-        }
-    }
-
-impl FromStr for ActionTable {
-    type Err = Error;
-
-    fn from_str(s: &str) -> DynResult<Self> {
-        Ok(Self (
-            s.split(';')
-                .filter_map(|e| Self::parse_line(e).ok())
-                .collect()
-            ))
-        }
+    pub output: Option<PathBuf>
     }

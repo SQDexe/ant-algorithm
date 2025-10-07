@@ -8,8 +8,8 @@ use {
         from_str as from_json,
         to_string_pretty as to_json
         },
+    core::cell::RefCell,
     std::{
-        cell::RefCell,
         collections::{
             HashMap,
             HashSet
@@ -38,7 +38,8 @@ use {
             Metric,
             Preference,
             Selection,
-            Dispersion
+            Dispersion,
+            Action
             },
         world::World
         }
@@ -72,11 +73,19 @@ impl Simulator {
             args.factor
                 .unwrap_or(bias::UNKOWN),
             args.actions
-                .and_then(|e| Some(e.build()))
+                .and_then(|e| {
+                    let mut rest: HashMap<_, Vec<_>> = HashMap::new();
+
+                    for (cycle, id, amount) in e.iter().map(Action::get_values) {
+                        rest.entry(cycle)
+                            .or_default()
+                            .push((id, amount));
+                        }
+
+                    Some(rest)
+                    })
                 .unwrap_or_default(),
-            args.grid
-                .and_then(|e| Some(e.build()))
-                .unwrap_or(Vec::from(GRID))
+            args.grid.unwrap_or(Vec::from(GRID))
             );
 
         /* Assert some conditions to avoid unnecessary errors */ {
@@ -88,9 +97,8 @@ impl Simulator {
                 .unzip();
             let actions_ids = HashSet::from_iter(
                 actions.values()
-                    .cloned()
                     .flatten()
-                    .map(|(c, _)| c)
+                    .map(|&(c, _)| c)
                 );
 
             /* Prepare assertion variables */

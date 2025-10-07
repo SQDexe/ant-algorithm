@@ -37,8 +37,8 @@ macro_rules! zip {
 /* Technical stuff - derive Display trait for enums */
 macro_rules! derive_enum_display {
     ( $enum:ident, $( $item:ident ),+ ) => {
-        impl std::fmt::Display for $enum {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        impl core::fmt::Display for $enum {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "{}", match self {
                     $( Self::$item => stringify!($item), )+
                     })
@@ -46,8 +46,8 @@ macro_rules! derive_enum_display {
             }
         };
     ( $enum:ident, $( $key:ident = $value:literal ),+ ) => {
-        impl std::fmt::Display for $enum {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        impl core::fmt::Display for $enum {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 write!(f, "{}", match self {
                     $( Self::$key => $value, )+
                     })
@@ -118,6 +118,38 @@ impl Dispersion {
 
 derive_enum_display!(Dispersion, None, Linear, Exponential, Relative);
 
+/* Technical stuff - aliases of some types */
+#[derive(Clone)]
+pub struct Action (
+    usize,
+    char,
+    u32
+    );
+
+impl Action {
+    #[inline]
+    pub const fn get_values(&self) -> (usize, char, u32) {
+        let &Action(cycle, id, amount) = self;
+        (cycle, id, amount)
+        }
+    }
+
+impl core::str::FromStr for Action {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Box<[_]> = s.split(',').collect();
+        match parts[..] {
+            [cycle, id, food] => Ok(Action(
+                cycle.parse()?,
+                id.parse()?,
+                food.parse()?
+                )),
+            _ => Err(anyhow::anyhow!("Parsing failed"))
+            }
+        }
+    }
+
 /* Technical stuff - data holder needed for constructing world's grid */
 #[derive(Clone, Copy)]
 pub enum PointInfo {
@@ -160,6 +192,28 @@ impl PointInfo {
         }
     }
 
+impl core::str::FromStr for PointInfo {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Box<[_]> = s.split(',').collect();
+        match parts[..] {
+            [id, x, y] => Ok(PointInfo::Empty(
+                id.parse()?,
+                x.parse()?,
+                y.parse()?
+                )),
+            [id, x, y, food] => Ok(PointInfo::Food(
+                id.parse()?,
+                x.parse()?,
+                y.parse()?,
+                food.parse()?
+                )),
+            _ => Err(anyhow::anyhow!("Parsing failed"))
+            }
+        }
+    }
+
 /* Technical stuff - alias for Rust's robust if else */
 pub trait BoolSelect<T> {
     fn select(&self, truthy: T, falsy: T) -> T;
@@ -167,7 +221,8 @@ pub trait BoolSelect<T> {
 
 impl<T> BoolSelect<T> for bool {
     fn select(&self, truthy: T, falsy: T) -> T {
-        if *self { truthy } else { falsy }
+        if *self { truthy }
+        else { falsy }
         }
     }
 
@@ -176,8 +231,8 @@ pub trait ToDisplay: Iterator {
     fn to_display(self, sep: &str) -> String;
     }
 
-impl<T, I: Iterator<Item = T>> ToDisplay for I
-where T: ToString {
+impl<T, I> ToDisplay for I
+where T: ToString, I: Iterator<Item = T> {
     fn to_display(self, sep: &str) -> String {
         self.map(|e| e.to_string())
             .collect::<Vec<_>>()
