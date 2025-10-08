@@ -134,7 +134,7 @@ impl core::str::FromStr for Action {
                 id.parse()?,
                 food.parse()?
                 )),
-            _ => Err(anyhow::anyhow!("Parsing failed"))
+            _ => Err(anyhow::anyhow!("Action parsing failed"))
             }
         }
     }
@@ -198,20 +198,8 @@ impl core::str::FromStr for PointInfo {
                 y.parse()?,
                 food.parse()?
                 )),
-            _ => Err(anyhow::anyhow!("Parsing failed"))
+            _ => Err(anyhow::anyhow!("PointInfo parsing failed"))
             }
-        }
-    }
-
-/* Technical stuff - alias for Rust's robust if else */
-pub trait BoolSelect<T> {
-    fn select(&self, truthy: T, falsy: T) -> T;
-    }
-
-impl<T> BoolSelect<T> for bool {
-    fn select(&self, truthy: T, falsy: T) -> T {
-        if *self { truthy }
-        else { falsy }
         }
     }
 

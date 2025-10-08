@@ -36,8 +36,8 @@ fn main() {
     if let Some(path) = output {        
         /* Try to save statistics */
         match simulation.write_to_file(&path) {
-            Ok(_) => println!("### Statistics saved in '{}' ###", path.display()),
-            _ => eprintln!("!!! A problem occured while trying to save the statistics !!!")
+            Ok(_) => println!("Info: Statistics saved in '{}'", path.display()),
+            _ => eprintln!("Error: A problem occured while trying to save the statistics")
             }
         }
     }

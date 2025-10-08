@@ -33,7 +33,6 @@ use {
             GRID
             },
         tech::{
-            BoolSelect,
             ToDisplay,
             DisplayOption,
             Metric,
@@ -76,7 +75,8 @@ impl Simulator {
                 .and_then(|e| {
                     let mut rest: HashMap<_, Vec<_>> = HashMap::new();
 
-                    for (cycle, id, amount) in e.iter().map(Action::get_values) {
+                    for (cycle, id, amount) in e.iter()
+                    .map(Action::get_values) {
                         rest.entry(cycle)
                             .or_default()
                             .push((id, amount));
@@ -147,7 +147,7 @@ impl Simulator {
         
         /* Set whether to log information */
         let logs = if ! args.quiet && (0xfff < args.ants || ! singleton) {
-            println!("### Logging hidden ###");
+            println!("Info: Logging hidden");
             false
         } else {
             ! args.quiet
@@ -167,7 +167,7 @@ impl Simulator {
                 .dispersion_factor(dispersion, factor)
                 .build()
             else {
-                error_exit!(1, "!!! A problem occured while trying to build the world object - simulation stopped !!!");
+                error_exit!(1, "Error: A problem occured while trying to build the world object - simulation stopped");
                 };
             Rc::new(RefCell::new(world))
             };
@@ -195,10 +195,10 @@ impl Simulator {
             stats: Vec::with_capacity(batch),         
             ant_hill,
             world_cell,
-            show_operation: singleton.select(
-                Self::show_one,
-                Self::show_avg
-                )
+            show_operation: match singleton {
+                true => Self::show_one,
+                false => Self::show_avg
+                }
             }
         }
 

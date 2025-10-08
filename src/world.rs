@@ -11,7 +11,6 @@ use {
         tech::{
             DistanceFunction,
             PointInfo,
-            BoolSelect,
             Dispersion,
             Metric,
             Preference,
@@ -142,26 +141,26 @@ impl World {
         /* Get current postion */
         let Some(position_id) = visited.chars().last()
         else {
-            error_exit!(1, "!!! A problem occured while calculating postions - got empty route !!!");
+            error_exit!(1, "Error: A problem occured while calculating postions - got empty route");
             };
         
         if self.foodsource_ids.is_empty() {
-            error_exit!(1, "!!! A problem occured while calculating postions - lack of foodsources !!!");
+            error_exit!(1, "Error: A problem occured while calculating postions - lack of foodsources");
             }
 
         /* Find current position's coordinates */
         let Some(&Point { x, y, .. }) = find_point!(self.points, position_id)
         else {
-            error_exit!(1, "!!! A problem occured while calculating postions - recived an invalid point id: {} !!!", position_id);
+            error_exit!(1, "Error: A problem occured while calculating postions - recived an invalid point id: {}", position_id);
             };
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in zip!(mut self.auxils, self.points) {
             let viable = ! visited.contains(auxil.id) || self.foodsource_ids.contains(&position_id);
-            auxil.ratio = viable.select(
-                (self.preference_operation)(point, x, y, self.distance_operation),
-                bias::MINUTE
-                )
+            auxil.ratio = match viable {
+                true => (self.preference_operation)(point, x, y, self.distance_operation),
+                false => bias::MINUTE
+                }
             };
 
         /* Sort the helper array */
@@ -198,7 +197,7 @@ impl World {
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
         let Some(point) = find_point!(mut self.points, position_id)
         else {
-            error_exit!(1, "!!! A problem occured while updating points - recived an invalid point id: {} !!!", position_id);
+            error_exit!(1, "Error: A problem occured while updating points - recived an invalid point id: {}", position_id);
             };
 
         /* Assign the amount, and add to foodsource list */
@@ -210,7 +209,7 @@ impl World {
     pub fn consume_foodsource(&mut self, position_id: char) {
         let Some(point) = find_point!(mut self.points, position_id)
         else {
-            error_exit!(1, "!!! A problem occured while consuming food - recived an invalid point id: {} !!!", position_id);
+            error_exit!(1, "Error: A problem occured while consuming food - recived an invalid point id: {}", position_id);
             };
 
         /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
@@ -305,9 +304,9 @@ impl WorldBuilder {
 
         let foodsource_ids = HashSet::from_iter(
             point_list.iter()
-                .filter_map(|point_info| match point_info {
-                    &PointInfo::Food(.., 0) => None,
-                    &PointInfo::Food(id, ..) => Some(id),
+                .filter_map(|&point_info| match point_info {
+                    PointInfo::Food(.., 0) => None,
+                    PointInfo::Food(id, ..) => Some(id),
                     _ => None
                     })
             );
@@ -400,7 +399,7 @@ impl WorldBuilder {
         self.metric = Some(metric);
         self
         }
-    pub fn dispersion_factor(mut self, dispersion_method: Option<Dispersion>, factor: f64) -> Self {
+    pub const fn dispersion_factor(mut self, dispersion_method: Option<Dispersion>, factor: f64) -> Self {
         (self.dispersion_method, self.factor) = (dispersion_method, factor);
         self
         }
