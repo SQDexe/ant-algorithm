@@ -35,6 +35,7 @@ use {
         tech::{
             BoolSelect,
             ToDisplay,
+            DisplayOption,
             Metric,
             Preference,
             Selection,
@@ -70,8 +71,7 @@ impl Simulator {
             .. } = args;
         /* Unpack arguments with preprocessing */
         let ( factor, actions, grid ) = (
-            args.factor
-                .unwrap_or(bias::UNKOWN),
+            args.factor.unwrap_or(bias::UNKOWN),
             args.actions
                 .and_then(|e| {
                     let mut rest: HashMap<_, Vec<_>> = HashMap::new();
@@ -111,11 +111,12 @@ impl Simulator {
             let resonable_num_of_ants = (1 ..= 0xffffff).contains(&ants);
             let resonable_num_of_cycles = (1 .. 100).contains(&cycles);
             let positive_nonzero_pheromone_strength = 0.0 < pheromone;
-            let unset_or_correct_dispersion_factor = match dispersion {
-                Dispersion::Linear => 0.0 <= factor,
-                Dispersion::Exponential => 1.0 <= factor,
-                Dispersion::Relative => (0.0 ..= 1.0).contains(&factor),
-                _ => true
+            let unset_or_correct_dispersion_factor = match (dispersion, factor) {
+                (Some(Dispersion::Linear), 0.0 ..) => true,
+                (Some(Dispersion::Exponential), 1.0 ..) => true,
+                (Some(Dispersion::Relative), 0.0 ..= 1.0) => true,
+                (None, value) if value.is_nan() => true,
+                _ => false
                 };
             let actions_correct = point_ids.is_superset(&actions_ids);
             let anthill_has_no_food = {
@@ -225,7 +226,7 @@ impl Simulator {
                 let mut world = self.world_cell.borrow_mut();
 
                 /* Disperse pheromones, if applicable */
-                if self.config.dispersion.is_set() {
+                if self.config.dispersion.is_some() {
                     world.disperse_pheromons();
                     }
 
@@ -413,7 +414,7 @@ struct Config {
     select: Selection,
     preference: Preference,
     metric: Metric,
-    dispersion: Dispersion,
+    dispersion: Option<Dispersion>,
     factor: f64
     }
 
@@ -436,7 +437,7 @@ o> -------------------------- <o",
             self.cycles, self.ants, self.pheromone, self.decision,
             self.rate, self.returns,
             self.select, self.preference, self.metric,
-            self.dispersion, self.factor
+            self.dispersion.display_option(), self.factor
             );
         }
     }

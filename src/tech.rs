@@ -100,23 +100,12 @@ derive_enum_display!(Metric, Chebyshev, Euclidean, Taxicab);
 /* Technical stuff - types of pheromone dispersion enum */
 #[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Dispersion {
-    None,
     Linear,
     Exponential,
     Relative
     }
 
-impl Dispersion {
-    #[inline]
-    pub const fn is_set(&self) -> bool {
-        match self {
-            Dispersion::None => false,
-            _ => true
-            }
-        }
-    }
-
-derive_enum_display!(Dispersion, None, Linear, Exponential, Relative);
+derive_enum_display!(Dispersion, Linear, Exponential, Relative);
 
 /* Technical stuff - aliases of some types */
 #[derive(Clone)]
@@ -237,5 +226,21 @@ where T: ToString, I: Iterator<Item = T> {
         self.map(|e| e.to_string())
             .collect::<Vec<_>>()
             .join(sep)
+        }
+    }
+
+/* Technical stuff - pretty prinitng an Option */
+pub trait DisplayOption {
+    fn display_option(&self) -> String;
+    }
+
+impl<T> DisplayOption for Option<T>
+where T: core::fmt::Display {
+
+    fn display_option(&self) -> String {
+        match self {
+            Some(value) => format!("{value}"),
+            None => String::from("None")
+            }
         }
     }

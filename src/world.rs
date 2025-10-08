@@ -290,7 +290,7 @@ pub struct WorldBuilder {
     point_preference: Option<Preference>,
     metric: Option<Metric>,
     dispersion_method: Option<Dispersion>,
-    factor: Option<f64>,
+    factor: f64,
     }
 
 /* Technical stuff - World builder */
@@ -355,13 +355,13 @@ impl WorldBuilder {
                 Metric::Euclidean => distance::euclidean,
                 Metric::Taxicab => distance::taxicab
                 },
-            disperse_operation: match self.dispersion_method? {
-                Dispersion::Linear => disperse::linear,
-                Dispersion::Exponential => disperse::exponential,
-                Dispersion::Relative => disperse::relative,
+            disperse_operation: match self.dispersion_method {
+                Some(Dispersion::Linear) => disperse::linear,
+                Some(Dispersion::Exponential) => disperse::exponential,
+                Some(Dispersion::Relative) => disperse::relative,
                 _ => |_, _| bias::UNKOWN
                 },
-            factor: self.factor?
+            factor: self.factor
             };
 
         Some(world)
@@ -400,9 +400,8 @@ impl WorldBuilder {
         self.metric = Some(metric);
         self
         }
-    pub const fn dispersion_factor(mut self, dispersion_method: Dispersion, factor: f64) -> Self {
-        self.dispersion_method = Some(dispersion_method);
-        self.factor = Some(factor);
+    pub fn dispersion_factor(mut self, dispersion_method: Option<Dispersion>, factor: f64) -> Self {
+        (self.dispersion_method, self.factor) = (dispersion_method, factor);
         self
         }
     }

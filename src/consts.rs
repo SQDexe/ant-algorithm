@@ -17,8 +17,7 @@ pub mod default {
     use crate::tech::{
         Preference,
         Selection,
-        Metric,
-        Dispersion
+        Metric
         };
 
     pub const NUM_OF_CYCLES: usize = 8;
@@ -30,7 +29,6 @@ pub mod default {
     pub const SELECT_METHOD: Selection = Selection::Roulette;
     pub const PREFERENCE_METHOD: Preference = Preference::PD;
     pub const METRIC: Metric = Metric::Euclidean;
-    pub const DISPERSION: Dispersion = Dispersion::None;
     pub const QUIET: bool = false;
     pub const BATCH_SIZE: usize = 1;
     }
