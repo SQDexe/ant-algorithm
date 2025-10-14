@@ -17,6 +17,17 @@ macro_rules! assertion {
         )*};
     }
 
+/* Technical stuff - shorthand for robust if-else, or match bool blocks */
+#[macro_export]
+macro_rules! select {
+    ($bool:expr, $truthy:expr, $falsy:expr) => {
+        match $bool {
+            true => $truthy,
+            false => $falsy
+            }
+        };
+    }
+
 /* Technical stuff - iterator zipping shortcut */
 #[macro_export]
 macro_rules! zip {
@@ -212,7 +223,7 @@ impl<T, I> ToDisplay for I
 where T: ToString, I: Iterator<Item = T> {
     fn to_display(self, sep: &str) -> String {
         self.map(|e| e.to_string())
-            .collect::<Vec<_>>()
+            .collect::<Box<[_]>>()
             .join(sep)
         }
     }

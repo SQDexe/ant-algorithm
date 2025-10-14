@@ -25,6 +25,7 @@ use {
     crate::{
         assertion,
         error_exit,
+        select,
         zip,
         anthill::AntHill,
         args::Args,
@@ -147,7 +148,7 @@ impl Simulator {
         
         /* Set whether to log information */
         let logs = if ! args.quiet && (0xfff < args.ants || ! singleton) {
-            println!("Info: Logging hidden");
+            eprintln!("Info: Logging hidden");
             false
         } else {
             ! args.quiet
@@ -195,10 +196,10 @@ impl Simulator {
             stats: Vec::with_capacity(batch),         
             ant_hill,
             world_cell,
-            show_operation: match singleton {
-                true => Self::show_one,
-                false => Self::show_avg
-                }
+            show_operation: select!(singleton,
+                Self::show_one,
+                Self::show_avg
+                )
             }
         }
 

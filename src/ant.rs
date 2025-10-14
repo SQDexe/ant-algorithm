@@ -9,7 +9,7 @@ pub struct Ant {
     world_cell: Rc<RefCell<World>>,
     satiated: bool,
     route: String,
-    routes_counter: usize
+    routes_counter: u8
     }
 
 impl Ant {
@@ -93,6 +93,6 @@ impl Ant {
     pub const fn get_route_length(&self) -> usize
         { self.route.len() }
     #[inline]
-    pub const fn get_routes_count(&self) -> usize
+    pub const fn get_routes_count(&self) -> u8
         { self.routes_counter }
     }

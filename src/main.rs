@@ -12,6 +12,7 @@ mod tech;
 
 use {
     clap::Parser,
+    std::time::Instant,
     crate::{
         args::Args,
         simul::Simulator
@@ -21,16 +22,37 @@ use {
 fn main() {
     /* Parse the CL arguments */
     let args = Args::parse();
-    let output = args.output.clone();
+    let (output, timing) = (
+        args.output.clone(),
+        args.timing
+        );
 
     /* Create a new simulation manager */
     let mut simulation = Simulator::new(args);
 
+    /* Get current time */
+    let start = Instant::now();
+
     /* Simulate */
-    simulation.simulate();    
+    simulation.simulate();
+
+    /* Get full time */
+    let stop = start.elapsed();
 
     /* Show informations */
     simulation.show();
+
+    /* Show time information */
+    if timing {
+        println!(
+"o> ---- TIME ---- <o
+| seconds: {}
+| microseconds: {}
+o> -------------- <o",
+            stop.as_secs_f64(),
+            stop.as_micros()
+            );
+        }
 
     /* Save statistics to a file */
     if let Some(path) = output {        

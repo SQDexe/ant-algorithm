@@ -62,7 +62,6 @@ pub struct Args {
     /// must contain at least 2 points,  
     /// the first point is automatically chosen as anthill,  
     /// format 'id,x,y[,food]'  
-    ///   
     /// [default: a,6,1;b,13,1;c,4,3;d,4,5;e,8,5;f,6,8;g,10,8,15]  
     #[clap(short = 'G', long, value_delimiter = ';', verbatim_doc_comment)]
     pub grid: Option<Vec<PointInfo>>,
@@ -74,6 +73,9 @@ pub struct Args {
     /// Run program in quite mode  
     #[clap(short, long, action, default_value_t = default::QUIET)]
     pub quiet: bool,
+    /// Mesure how long did the simulation execute 
+    #[clap(short, long, action, default_value_t = default::TIMING)]
+    pub timing: bool,
     /// Sets how many times to run the simulation  
     #[clap(short, long, default_value_t = default::BATCH_SIZE)]
     pub batch: usize,

@@ -30,6 +30,7 @@ pub mod default {
     pub const PREFERENCE_METHOD: Preference = Preference::PD;
     pub const METRIC: Metric = Metric::Euclidean;
     pub const QUIET: bool = false;
+    pub const TIMING: bool = false;
     pub const BATCH_SIZE: usize = 1;
     }
 

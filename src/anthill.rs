@@ -13,7 +13,7 @@ use {
 /* Anthill strucutre, for handling Ant operations */
 pub struct AntHill {
     number_of_ants: usize,
-    ants: Vec<Ant>
+    ants: Box<[Ant]>
     }
 
 impl AntHill {
@@ -64,12 +64,14 @@ impl AntHill {
     pub fn get_average_route_length(&self) -> f64 {
         self.ants.iter()
             .map(|ant| ant.get_route_length() as f64)
-            .sum::<f64>() / self.number_of_ants as f64
+            .sum::<f64>() /
+            self.number_of_ants as f64
         }
     pub fn get_average_routes_count(&self) -> f64 {
         self.ants.iter()
             .map(|ant| ant.get_routes_count() as f64)
-            .sum::<f64>() / self.number_of_ants as f64
+            .sum::<f64>() /
+            self.number_of_ants as f64
         }
     pub fn get_satiated_ants_count(&self) -> usize {
         self.ants.iter()

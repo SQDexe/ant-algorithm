@@ -6,6 +6,7 @@ use {
     std::collections::HashSet,
     crate::{
         error_exit,
+        select,
         zip,
         consts::bias,
         tech::{
@@ -157,10 +158,10 @@ impl World {
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in zip!(mut self.auxils, self.points) {
             let viable = ! visited.contains(auxil.id) || self.foodsource_ids.contains(&position_id);
-            auxil.ratio = match viable {
-                true => (self.preference_operation)(point, x, y, self.distance_operation),
-                false => bias::MINUTE
-                }
+            auxil.ratio = select!(viable,
+                (self.preference_operation)(point, x, y, self.distance_operation),
+                bias::MINUTE
+                )
             };
 
         /* Sort the helper array */
@@ -304,9 +305,9 @@ impl WorldBuilder {
 
         let foodsource_ids = HashSet::from_iter(
             point_list.iter()
-                .filter_map(|&point_info| match point_info {
-                    PointInfo::Food(.., 0) => None,
-                    PointInfo::Food(id, ..) => Some(id),
+                .filter_map(|point_info| match point_info {
+                    &PointInfo::Food(.., 0) => None,
+                    &PointInfo::Food(id, ..) => Some(id),
                     _ => None
                     })
             );
