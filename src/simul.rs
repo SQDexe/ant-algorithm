@@ -72,19 +72,17 @@ impl Simulator {
         /* Unpack arguments with preprocessing */
         let ( factor, actions, grid ) = (
             args.factor.unwrap_or(bias::UNKOWN),
-            args.actions
-                .and_then(|e| {
-                    let mut rest: HashMap<_, Vec<_>> = HashMap::new();
+            args.actions.map(|e| {
+                let mut rest: HashMap<_, Vec<_>> = HashMap::new();
 
-                    for (cycle, id, amount) in e.iter()
-                    .map(Action::get_values) {
-                        rest.entry(cycle)
-                            .or_default()
-                            .push((id, amount));
-                        }
+                for (cycle, id, amount) in e.iter().map(Action::get_values) {
+                    rest.entry(cycle)
+                        .or_default()
+                        .push((id, amount));
+                    }
 
-                    Some(rest)
-                    })
+                rest
+                })
                 .unwrap_or_default(),
             args.grid.unwrap_or(Vec::from(GRID))
             );
@@ -156,7 +154,7 @@ impl Simulator {
         
         /* Build World, and contain it inside smart pointer */
         let world_cell = {
-            let Some(world) = World::builder()
+            let world = World::builder()
                 .point_list(grid)
                 .decision_points(decision)
                 .pheromone(pheromone)
@@ -167,9 +165,8 @@ impl Simulator {
                 .metric(metric)
                 .dispersion_factor(dispersion, factor)
                 .build()
-            else {
-                error_exit!(1, "Error: A problem occured while trying to build the world object - simulation stopped");
-                };
+                .expect("Error: A problem occured while trying to build the world object - simulation stopped");
+            
             Rc::new(RefCell::new(world))
             };
 
