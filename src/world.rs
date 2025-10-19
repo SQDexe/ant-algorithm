@@ -27,18 +27,6 @@ use {
         }
     };
 
-/* Technical stuff - macro for finding point */
-macro_rules! find_point {
-    ( $points:expr, $id:ident ) => {
-        $points.iter()
-            .find(|point| point.id == $id)
-        };
-    ( mut $points:expr, $id:ident ) => {
-        $points.iter_mut()
-            .find(|point| point.id == $id)
-        };
-    }
-
 /* World structure, for handling most of logic operations, and managing the grid */
 pub struct World {
     points: Vec<Point>,
@@ -138,21 +126,23 @@ impl World {
     pub fn get_new_position(&mut self, visited: &str) -> char {
         /* Clear the helper array */
         self.reset_auxils();
-
-        /* Get current postion */
-        let Some(position_id) = visited.chars().last()
-        else {
-            error_exit!(1, "Error: A problem occured while calculating postions - got empty route");
-            };
         
         if self.foodsource_ids.is_empty() {
-            error_exit!(1, "Error: A problem occured while calculating postions - lack of foodsources");
+            error_exit!("A problem occured while calculating postions - lack of foodsources");
             }
 
-        /* Find current position's coordinates */
-        let Some(&Point { x, y, .. }) = find_point!(self.points, position_id)
+        /* Get current postion */
+        let Some(position_id) = visited.chars()
+            .last()
         else {
-            error_exit!(1, "Error: A problem occured while calculating postions - recived an invalid point id: {}", position_id);
+            error_exit!("A problem occured while calculating postions - got empty route");
+            };
+
+        /* Find current position's coordinates */
+        let Some(&Point { x, y, .. }) = self.points.iter()
+            .find(|point| point.id == position_id)
+        else {
+            error_exit!("A problem occured while calculating postions - recived an invalid point id: {}", position_id);
             };
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
@@ -196,27 +186,31 @@ impl World {
 
     /* Set amount of food at given point */
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
-        let Some(point) = find_point!(mut self.points, position_id)
+        /* Try finding the point */
+        if let Some(point) = self.points.iter_mut()
+        .find(|point| point.id == position_id) {
+            /* Assign the amount, and add to foodsource list */
+            point.food = amount;
+            self.foodsource_ids.insert(position_id);
+            }
         else {
-            error_exit!(1, "Error: A problem occured while updating points - recived an invalid point id: {}", position_id);
-            };
-
-        /* Assign the amount, and add to foodsource list */
-        point.food = amount;
-        self.foodsource_ids.insert(position_id);
+            error_exit!("A problem occured while updating points - recived an invalid point id: {}", position_id);
+            }
         }
 
     /* Decrease of food at given point */
     pub fn consume_foodsource(&mut self, position_id: char) {
-        let Some(point) = find_point!(mut self.points, position_id)
+        /* Try finding the point */
+        if let Some(point) = self.points.iter_mut()
+        .find(|point| point.id == position_id) {
+            /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
+            point.food = point.food.saturating_sub(self.consume_rate);
+            if point.food == 0 {
+                self.foodsource_ids.remove(&position_id);
+                }
+            }
         else {
-            error_exit!(1, "Error: A problem occured while consuming food - recived an invalid point id: {}", position_id);
-            };
-
-        /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
-        point.food = point.food.saturating_sub(self.consume_rate);
-        if point.food == 0 {
-            self.foodsource_ids.remove(&position_id);
+            error_exit!("A problem occured while consuming food - recived an invalid point id: {}", position_id);
             }
         }
 

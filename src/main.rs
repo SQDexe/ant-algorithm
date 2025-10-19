@@ -12,7 +12,16 @@ mod tech;
 
 use {
     clap::Parser,
-    std::time::Instant,
+    env_logger::builder as logger_builder,
+    log::{
+        error,
+        info,
+        LevelFilter
+        },
+    std::{
+        io::Write,
+        time::Instant
+        },
     crate::{
         args::Args,
         simul::Simulator
@@ -20,6 +29,16 @@ use {
     };
 
 fn main() {
+    /* Initialise the logger */
+    logger_builder()
+        .format(|buf, record| {
+            let level = record.level();
+            let style = buf.default_level_style(level);
+            writeln!(buf, "{style}{level}{style:#}: {}", record.args())
+            })
+        .filter_level(LevelFilter::Trace)
+        .init();
+    
     /* Parse the CL arguments */
     let args = Args::parse();
     let (output, timing) = (
@@ -58,8 +77,8 @@ o> -------------- <o",
     if let Some(path) = output {        
         /* Try to save statistics */
         match simulation.write_to_file(&path) {
-            Ok(_) => println!("Info: Statistics saved in '{}'", path.display()),
-            _ => eprintln!("Error: A problem occured while trying to save the statistics")
+            Ok(_) => info!("Statistics saved in '{}'", path.display()),
+            _ => error!("A problem occured while trying to save the statistics")
             }
         }
     }

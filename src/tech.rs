@@ -1,9 +1,9 @@
 /* Technical stuff - print error, and exit macro */
 #[macro_export]
 macro_rules! error_exit {
-    ( $code:literal, $fstr:expr $(, $arg:expr)* ) => {
-        eprintln!($fstr, $( $arg )* );
-        std::process::exit($code);
+    ( $fstr:literal $(, $arg:expr)* ) => {
+        log::error!($fstr $(, $arg )* );
+        std::process::exit(1);
         };
     }
 
@@ -12,7 +12,7 @@ macro_rules! error_exit {
 macro_rules! assertion {
     ( $($boolean:expr), *) => {$(
         if ! $boolean {
-            error_exit!(1, "Assertion failed on: {}", stringify!($boolean));
+            error_exit!("Assertion failed on: {}", stringify!($boolean));
             }
         )*};
     }

@@ -1,5 +1,6 @@
 use {
     anyhow::Result as DynResult,
+    log::info,
     serde::{
         Deserialize,
         Serialize
@@ -146,7 +147,7 @@ impl Simulator {
         
         /* Set whether to log information */
         let logs = if ! args.quiet && (0xfff < args.ants || ! singleton) {
-            eprintln!("Info: Logging hidden");
+            info!("Logging hidden");
             false
         } else {
             ! args.quiet
@@ -154,7 +155,7 @@ impl Simulator {
         
         /* Build World, and contain it inside smart pointer */
         let world_cell = {
-            let world = World::builder()
+            let Some(world) = World::builder()
                 .point_list(grid)
                 .decision_points(decision)
                 .pheromone(pheromone)
@@ -165,7 +166,9 @@ impl Simulator {
                 .metric(metric)
                 .dispersion_factor(dispersion, factor)
                 .build()
-                .expect("Error: A problem occured while trying to build the world object - simulation stopped");
+            else {
+                error_exit!("A problem occured while trying to build the world object - simulation stopped");
+                };
             
             Rc::new(RefCell::new(world))
             };
