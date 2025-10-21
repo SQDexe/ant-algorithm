@@ -7,7 +7,6 @@ use {
     crate::{
         error_exit,
         select,
-        zip,
         consts::bias,
         tech::{
             DistanceFunction,
@@ -55,8 +54,9 @@ impl World {
     #[inline]
     const fn select_greedy(&self) -> usize
         { 0 }
-    fn select_randomly(&self) -> usize
-        { random_range(0 .. self.number_of_decision_points) }
+    fn select_randomly(&self) -> usize {
+        random_range(0 .. self.number_of_decision_points)
+        }
     fn select_roulette(&self) -> usize {
         /* Get helper array */
         let wheel: Vec<f64> = {
@@ -91,7 +91,8 @@ impl World {
 
     /* Reset auxils in sync with points - the ratios are overwritten each time */
     fn reset_auxils(&mut self) {
-        for (auxil, point) in zip!(mut self.auxils, self.points) {
+        for (auxil, point) in self.auxils.iter_mut()
+        .zip(self.points.iter()) {
             auxil.id = point.id
             }
         }
@@ -117,7 +118,8 @@ impl World {
 
     /* Reset all foodsources to original state */
     fn reset_points(&mut self) {
-        for (point, &food) in zip!(mut self.points, self.foods) {
+        for (point, &food) in self.points.iter_mut()
+        .zip(self.foods.iter()) {
             point.food = food;
             }
         }
@@ -131,22 +133,20 @@ impl World {
             error_exit!("A problem occured while calculating postions - lack of foodsources");
             }
 
-        /* Get current postion */
-        let Some(position_id) = visited.chars()
+        /* Get current postion's id, and coordinates */
+        let (position_id, x, y) = visited.chars()
             .last()
-        else {
-            error_exit!("A problem occured while calculating postions - got empty route");
-            };
-
-        /* Find current position's coordinates */
-        let Some(&Point { x, y, .. }) = self.points.iter()
-            .find(|point| point.id == position_id)
-        else {
-            error_exit!("A problem occured while calculating postions - recived an invalid point id: {}", position_id);
-            };
+            .map(|position_id|
+                self.points.iter()
+                    .find(|point| point.id == position_id)
+                    .map(|&Point { x, y, .. }| (position_id, x, y))
+                )
+            .flatten()
+            .expect("A problem occured while calculating postions - got empty route");
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
-        for (auxil, point) in zip!(mut self.auxils, self.points) {
+        for (auxil, point) in self.auxils.iter_mut()
+        .zip(self.points.iter()) {
             let viable = ! visited.contains(auxil.id) || self.foodsource_ids.contains(&position_id);
             auxil.ratio = select!(viable,
                 (self.preference_operation)(point, x, y, self.distance_operation),
@@ -187,30 +187,26 @@ impl World {
     /* Set amount of food at given point */
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
         /* Try finding the point */
-        if let Some(point) = self.points.iter_mut()
-        .find(|point| point.id == position_id) {
-            /* Assign the amount, and add to foodsource list */
-            point.food = amount;
-            self.foodsource_ids.insert(position_id);
-            }
-        else {
-            error_exit!("A problem occured while updating points - recived an invalid point id: {}", position_id);
-            }
+        let point = self.points.iter_mut()
+            .find(|point| point.id == position_id)
+            .expect("A problem occured while updating points");
+            
+        /* Assign the amount, and add to foodsource list */
+        point.food = amount;
+        self.foodsource_ids.insert(position_id);
         }
 
     /* Decrease of food at given point */
     pub fn consume_foodsource(&mut self, position_id: char) {
         /* Try finding the point */
-        if let Some(point) = self.points.iter_mut()
-        .find(|point| point.id == position_id) {
-            /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
-            point.food = point.food.saturating_sub(self.consume_rate);
-            if point.food == 0 {
-                self.foodsource_ids.remove(&position_id);
-                }
-            }
-        else {
-            error_exit!("A problem occured while consuming food - recived an invalid point id: {}", position_id);
+        let point = self.points.iter_mut()
+            .find(|point| point.id == position_id)
+            .expect("A problem occured while consuming food");
+
+        /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
+        point.food = point.food.saturating_sub(self.consume_rate);
+        if point.food == 0 {
+            self.foodsource_ids.remove(&position_id);
             }
         }
 

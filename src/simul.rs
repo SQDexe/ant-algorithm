@@ -9,7 +9,6 @@ use {
         from_str as from_json,
         to_string_pretty as to_json
         },
-    core::cell::RefCell,
     std::{
         collections::{
             HashMap,
@@ -23,11 +22,11 @@ use {
         path::Path,
         rc::Rc
         },
+    core::cell::RefCell,
     crate::{
         assertion,
         error_exit,
         select,
-        zip,
         anthill::AntHill,
         args::Args,
         consts::{
@@ -69,37 +68,39 @@ impl Simulator {
             select, preference, metric,
             dispersion,
             batch,
+            factor, actions, grid,
             .. } = args;
-        /* Unpack arguments with preprocessing */
-        let ( factor, actions, grid ) = (
-            args.factor.unwrap_or(bias::UNKOWN),
-            args.actions.map(|e| {
-                let mut rest: HashMap<_, Vec<_>> = HashMap::new();
 
-                for (cycle, id, amount) in e.iter().map(Action::get_values) {
-                    rest.entry(cycle)
-                        .or_default()
-                        .push((id, amount));
-                    }
-
-                rest
-                })
-                .unwrap_or_default(),
-            args.grid.unwrap_or(Vec::from(GRID))
+        /* Preproces arguments */
+        let (factor, grid) = (
+            factor.unwrap_or(bias::UNKOWN),
+            grid.unwrap_or(Vec::from(GRID))
             );
+        let actions = actions.map(|action_list| {
+            let mut rest: HashMap<_, Vec<_>> = HashMap::new();
+
+            for (cycle, id, amount) in action_list.iter()
+            .map(Action::get_values) {
+                rest.entry(cycle)
+                    .or_default()
+                    .push((id, amount));
+                }
+
+            rest
+            })
+            .unwrap_or_default();
 
         /* Assert some conditions to avoid unnecessary errors */ {
             /* Prepare variables */
             let valid_grid_range = -99 ..= 99;
             let num_of_points = grid.len();
             let (point_ids, point_pos): (HashSet<_>, HashSet<_>) = grid.iter()
-                .map(|e| (e.get_id(), e.get_position()))
+                .map(|point| (point.get_id(), point.get_position()))
                 .unzip();
-            let actions_ids = HashSet::from_iter(
-                actions.values()
-                    .flatten()
-                    .map(|&(c, _)| c)
-                );
+            let actions_ids = actions.values()
+                .flatten()
+                .map(|&(chr, _)| chr)
+                .collect();
 
             /* Prepare assertion variables */
             let resonable_num_of_points = (2 .. 1000).contains(&num_of_points);
@@ -154,30 +155,24 @@ impl Simulator {
             };
         
         /* Build World, and contain it inside smart pointer */
-        let world_cell = {
-            let Some(world) = World::builder()
-                .point_list(grid)
-                .decision_points(decision)
-                .pheromone(pheromone)
-                .ants_return(returns)
-                .consume_rate(rate)
-                .select_method(select)
-                .point_preference(preference)
-                .metric(metric)
-                .dispersion_factor(dispersion, factor)
-                .build()
-            else {
-                error_exit!("A problem occured while trying to build the world object - simulation stopped");
-                };
-            
-            Rc::new(RefCell::new(world))
+        let Some(world_cell) = World::builder()
+            .point_list(grid)
+            .decision_points(decision)
+            .pheromone(pheromone)
+            .ants_return(returns)
+            .consume_rate(rate)
+            .select_method(select)
+            .point_preference(preference)
+            .metric(metric)
+            .dispersion_factor(dispersion, factor)
+            .build()
+            .map(|world| Rc::new(RefCell::new(world)))
+        else {
+            error_exit!("A problem occured while trying to build the world object - simulation stopped");
             };
 
         /* Create Anthill object */
-        let ant_hill = AntHill::new(
-            &world_cell,
-            ants
-            );
+        let ant_hill = AntHill::new(&world_cell, ants);
 
         /* Create configuration container */
         let config = Config {
@@ -338,7 +333,9 @@ o> ------------------------------ <o",
             total.average_returns += stat.average_returns;
             total_complete_routes += stat.completed as usize;
   
-            for (i, (strength, avg_strength)) in zip!(stat.pheromone_strengths, stat.get_pheromone_per_route()).enumerate() {
+            for (i, (strength, avg_strength)) in stat.pheromone_strengths.iter()
+            .zip(stat.get_pheromone_per_route().iter())
+            .enumerate() {
                 total.pheromone_strengths[i] += strength;
                 total_pheromone_per_route[i] += avg_strength;
                 }
@@ -350,7 +347,8 @@ o> ------------------------------ <o",
         /* Average out the totals */
         let avg_route_len = total.average_route_len / batch;
         let avg_returns = total.average_returns / batch;
-        let (avg_pheromone_strengths, avg_pheromone_per_route) = zip!(total.pheromone_strengths, total_pheromone_per_route)
+        let (avg_pheromone_strengths, avg_pheromone_per_route) = total.pheromone_strengths.iter()
+            .zip(total_pheromone_per_route.iter())
             .map(|(n, m)| (n / batch, m / batch))
             .unzip();
         let avg_ants_per_phase = total.ants_per_phase.iter()
@@ -388,7 +386,7 @@ o> ------------------------------ <o",
             file.read_to_string(&mut contents)?;
 
             /* Push old statistics from the file */
-            data.extend(from_json::<Vec<_>>(&contents)?);
+            data.extend(from_json::<Box<[_]>>(&contents)?);
             }
         
         /* File writer handle */
@@ -398,7 +396,7 @@ o> ------------------------------ <o",
         data.append(&mut self.stats);
 
         /* Try writing statistics to the file */
-        file.write_all(to_json(&data)?.as_bytes())?;
+        file.write_all(&to_json(&data)?.into_bytes())?;
 
         Ok(())
         }

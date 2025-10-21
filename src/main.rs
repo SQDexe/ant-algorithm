@@ -40,9 +40,9 @@ fn main() {
         .init();
     
     /* Parse the CL arguments */
-    let args = Args::parse();
+    let mut args = Args::parse();
     let (output, timing) = (
-        args.output.clone(),
+        args.output.take(),
         args.timing
         );
 

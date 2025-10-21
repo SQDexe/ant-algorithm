@@ -28,23 +28,6 @@ macro_rules! select {
         };
     }
 
-/* Technical stuff - iterator zipping shortcut */
-#[macro_export]
-macro_rules! zip {
-    ( mut $iter1:expr, $iter2:expr ) => {
-        $iter1.iter_mut()
-            .zip($iter2.iter())
-        };
-    ( $iter1:expr, $iter2:expr ) => {
-        $iter1.iter()
-            .zip($iter2.iter())
-        };
-    ( mut $iter1:expr, mut $iter2:expr ) => {
-        $iter1.iter_mut()
-            .zip($iter2.iter_mut())
-        };
-    }
-
 /* Technical stuff - derive Display trait for enums */
 macro_rules! derive_enum_display {
     ( $enum:ident, $( $item:ident ),+ ) => {
