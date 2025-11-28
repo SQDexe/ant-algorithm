@@ -1,8 +1,8 @@
 use {
     std::rc::Rc,
     core::{
-        cell::RefCell,
         iter::repeat_with,
+        cell::RefCell
         },
     crate::{
         ant::Ant,
@@ -24,7 +24,7 @@ impl AntHill {
 
         Self {
             number_of_ants,
-            ants: repeat_with(|| Ant::new(anthill, world_cell.clone()))
+            ants: repeat_with(|| Ant::new(anthill, Rc::clone(&world_cell)))
                 .take(number_of_ants)
                 .collect()
             }

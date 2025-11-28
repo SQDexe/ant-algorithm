@@ -1,6 +1,5 @@
 use {
     anyhow::Result as DynResult,
-    log::info,
     serde::{
         Deserialize,
         Serialize
@@ -8,6 +7,11 @@ use {
     serde_json::{
         from_str as from_json,
         to_string_pretty as to_json
+        },
+    show_option::ShowOption,
+    sqds_tools::{
+        select,
+        batch_assert
         },
     std::{
         collections::{
@@ -20,13 +24,11 @@ use {
             Write
             },
         path::Path,
+        process::exit,
         rc::Rc
         },
     core::cell::RefCell,
     crate::{
-        assertion,
-        error_exit,
-        select,
         anthill::AntHill,
         args::Args,
         consts::{
@@ -35,7 +37,6 @@ use {
             },
         tech::{
             ToDisplay,
-            DisplayOption,
             Metric,
             Preference,
             Selection,
@@ -127,7 +128,7 @@ impl Simulator {
             let resonable_batch_size = (1 .. 1000).contains(&batch);
 
             /* Assert! */
-            assertion!(
+            batch_assert!(
                 resonable_num_of_points,
                 points_have_unique_ids,
                 points_have_unique_postions,
@@ -148,7 +149,7 @@ impl Simulator {
         
         /* Set whether to log information */
         let logs = if ! args.quiet && (0xfff < args.ants || ! singleton) {
-            info!("Logging hidden");
+            eprintln!("[INFO]: Logging hidden");
             false
         } else {
             ! args.quiet
@@ -166,9 +167,10 @@ impl Simulator {
             .metric(metric)
             .dispersion_factor(dispersion, factor)
             .build()
-            .map(|world| Rc::new(RefCell::new(world)))
+            .map(|world| Rc::new(RefCell::new(world))) 
         else {
-            error_exit!("A problem occured while trying to build the world object - simulation stopped");
+            eprintln!("[ERROR]: A problem occured while trying to build the world object - simulation stopped");
+            exit(1);
             };
 
         /* Create Anthill object */
@@ -436,7 +438,7 @@ o> -------------------------- <o",
             self.cycles, self.ants, self.pheromone, self.decision,
             self.rate, self.returns,
             self.select, self.preference, self.metric,
-            self.dispersion.display_option(), self.factor
+            self.dispersion.show_or("None"), self.factor
             );
         }
     }

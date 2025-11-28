@@ -1,16 +1,15 @@
 use {
-    std::{
-        env::var_os,
-        io::Result as IO_Result
-        },
+    std::env::var,
+    winapi::um::winnt::LANG_ENGLISH,
     winresource::WindowsResource,
     };
 
-fn main() -> IO_Result<()> {
-    if var_os("CARGO_CFG_WINDOWS").is_some() {
+fn main() {
+    if let Ok("windows") = var("CARGO_CFG_TARGET_OS").as_deref() {
         WindowsResource::new()
-            .set_icon("assets/icon.ico")
-            .compile()?;
+            .set_icon("./assets/icon.ico")
+            .set_language(LANG_ENGLISH)
+            .compile()
+            .expect("Win settings build failed");
         }
-    Ok(())
     }

@@ -3,10 +3,12 @@ use {
         random,
         random_range
         },
-    std::collections::HashSet,
+    sqds_tools::select,
+    std::{
+        collections::HashSet,
+        process::exit
+        },
     crate::{
-        error_exit,
-        select,
         consts::bias,
         tech::{
             DistanceFunction,
@@ -130,19 +132,23 @@ impl World {
         self.reset_auxils();
         
         if self.foodsource_ids.is_empty() {
-            error_exit!("A problem occured while calculating postions - lack of foodsources");
+            eprintln!("[ERROR]: A problem occured while trying to find foodsources - simulation stopped");
+            exit(1);
             }
 
         /* Get current postion's id, and coordinates */
-        let (position_id, x, y) = visited.chars()
+        let data_tuple = visited.chars()
             .last()
-            .map(|position_id|
+            .and_then(|position_id|
                 self.points.iter()
                     .find(|point| point.id == position_id)
                     .map(|&Point { x, y, .. }| (position_id, x, y))
-                )
-            .flatten()
-            .expect("A problem occured while calculating postions - got empty route");
+                );
+
+        /* Unsafe note - unwrap is safe, because the route will never be empty, and the current position will always be contained */
+        let (position_id, x, y) = unsafe {
+            data_tuple.unwrap_unchecked()
+            };
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in self.auxils.iter_mut()
@@ -187,9 +193,13 @@ impl World {
     /* Set amount of food at given point */
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
         /* Try finding the point */
-        let point = self.points.iter_mut()
-            .find(|point| point.id == position_id)
-            .expect("A problem occured while updating points");
+        let wrapped_point = self.points.iter_mut()
+            .find(|point| point.id == position_id);
+
+        /* Unsafe note - unwrap is safe, because the point ids are checked during the setup */
+        let point = unsafe {
+            wrapped_point.unwrap_unchecked()
+            };
             
         /* Assign the amount, and add to foodsource list */
         point.food = amount;
@@ -199,9 +209,13 @@ impl World {
     /* Decrease of food at given point */
     pub fn consume_foodsource(&mut self, position_id: char) {
         /* Try finding the point */
-        let point = self.points.iter_mut()
-            .find(|point| point.id == position_id)
-            .expect("A problem occured while consuming food");
+        let wrapped_point = self.points.iter_mut()
+            .find(|point| point.id == position_id);
+
+        /* Unsafe note - unwrap is safe, because the point ids are checked during the setup */
+        let point = unsafe {
+            wrapped_point.unwrap_unchecked()
+            };
 
         /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
         point.food = point.food.saturating_sub(self.consume_rate);
