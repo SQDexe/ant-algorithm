@@ -1,14 +1,28 @@
 /* Functions for calulating distance in metric */
 pub mod distance {
-    pub fn chebyshev(x0: i16, y0: i16, x1: i16, y1: i16) -> f64 {
-        (x0 - x1).abs().max((y0 - y1).abs()) as f64
+    #[inline]
+    const fn delta(x0: i16, x1: i16) -> i16 {
+        x0 - x1
+        }
+    #[inline]
+    const fn delta_abs(x0: i16, x1: i16) -> i16 {
+        delta(x0, x1).abs()
+        }
+
+    pub const fn chebyshev(x0: i16, y0: i16, x1: i16, y1: i16) -> f64 {
+        f64::max(
+            delta_abs(x0, x1) as f64,
+            delta_abs(y0, y1) as f64
+            )
         }
     pub fn euclidean(x0: i16, y0: i16, x1: i16, y1: i16) -> f64 {
-        let (dx, dy) = (x0 - x1, y0 - y1);
-        ((dx * dx + dy * dy) as f64).sqrt()
+        f64::hypot(
+            delta(x0, x1) as f64,
+            delta(y0, y1) as f64
+            )
         }
     pub const fn taxicab(x0: i16, y0: i16, x1: i16, y1: i16) -> f64 {
-        ((x0 - x1).abs() + (y0 - y1).abs()) as f64
+        (delta_abs(x0, x1) + delta_abs(y0, y1)) as f64
         }
     }
 
