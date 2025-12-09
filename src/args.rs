@@ -73,6 +73,9 @@ pub struct Args {
     /// Run program in quite mode  
     #[clap(short, long, action, default_value_t = default::QUIET)]
     pub quiet: bool,
+    /// Run program with a seed
+    #[clap(short, long)]
+    pub seed: Option<u64>,
     /// Mesure how long did the simulation execute 
     #[clap(short, long, action, default_value_t = default::TIMING)]
     pub timing: bool,

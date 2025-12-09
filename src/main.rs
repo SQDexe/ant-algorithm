@@ -12,6 +12,7 @@ mod tech;
 
 use {
     clap::Parser,
+    fastrand::seed,
     std::time::Instant,
     crate::{
         args::Args,
@@ -22,10 +23,16 @@ use {
 fn main() {    
     /* Parse the CL arguments */
     let mut args = Args::parse();
-    let (output, timing) = (
+    let (output, timing, rand_seed) = (
         args.output.take(),
-        args.timing
+        args.timing,
+        args.seed.as_ref()
         );
+
+    /* If set, seed the random generator */
+    if let Some(&value) = rand_seed {
+        seed(value);
+        }
 
     /* Create a new simulation manager */
     let mut simulation = Simulator::new(args);

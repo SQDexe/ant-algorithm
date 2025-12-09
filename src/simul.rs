@@ -70,6 +70,7 @@ impl Simulator {
             dispersion,
             batch,
             factor, actions, grid,
+            seed,
             .. } = args;
 
         /* Preproces arguments */
@@ -181,7 +182,8 @@ impl Simulator {
             cycles, ants, pheromone, decision,
             rate, returns,
             select, preference, metric,
-            dispersion, factor
+            dispersion, factor,
+            seed
             };
 
         /* Create simulator */
@@ -416,7 +418,8 @@ struct Config {
     preference: Preference,
     metric: Metric,
     dispersion: Option<Dispersion>,
-    factor: f64
+    factor: f64,
+    seed: Option<u64>
     }
 
 impl Config {
@@ -434,11 +437,13 @@ impl Config {
 |            metric: {}
 |        dispersion: {}
 | dispersion factor: {}
+|              seed: {}
 o> -------------------------- <o",
             self.cycles, self.ants, self.pheromone, self.decision,
             self.rate, self.returns,
             self.select, self.preference, self.metric,
-            self.dispersion.show_or("None"), self.factor
+            self.dispersion.show_or("None"), self.factor,
+            self.seed.show_or("None")
             );
         }
     }

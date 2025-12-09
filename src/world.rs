@@ -1,7 +1,7 @@
 use {
-    rand::{
-        random,
-        random_range
+    fastrand::{
+        f64 as random_f64,
+        usize as random_usize
         },
     sqds_tools::select,
     std::{
@@ -57,7 +57,7 @@ impl World {
     const fn select_greedy(&self) -> usize
         { 0 }
     fn select_randomly(&self) -> usize {
-        random_range(0 .. self.number_of_decision_points)
+        random_usize(0 .. self.number_of_decision_points)
         }
     fn select_roulette(&self) -> usize {
         /* Get helper array */
@@ -80,7 +80,7 @@ impl World {
         let mut rest = wheel[index];
         
         /* Select random chance */
-        let chance = random();
+        let chance = random_f64();
 
         /* Spin the wheel until it stops */
         while rest < chance {
