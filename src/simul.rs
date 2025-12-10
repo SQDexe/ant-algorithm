@@ -1,14 +1,9 @@
 use {
     anyhow::Result as DynResult,
-    serde::{
-        Deserialize,
-        Serialize
-        },
     serde_json::{
         from_str as from_json,
         to_string_pretty as to_json
         },
-    show_option::ShowOption,
     sqds_tools::{
         select,
         batch_assert
@@ -36,12 +31,11 @@ use {
             GRID
             },
         tech::{
+            Action,
+            Config,
             ToDisplay,
-            Metric,
-            Preference,
-            Selection,
             Dispersion,
-            Action
+            Stats
             },
         world::World
         }
@@ -78,19 +72,15 @@ impl Simulator {
             factor.unwrap_or(bias::UNKOWN),
             grid.unwrap_or(Vec::from(GRID))
             );
-        let actions = actions.map(|action_list| {
-            let mut rest: HashMap<_, Vec<_>> = HashMap::new();
-
-            for (cycle, id, amount) in action_list.iter()
-            .map(Action::get_values) {
-                rest.entry(cycle)
+        let actions: HashMap<_, Vec<_>> = actions.into_iter()
+            .flatten()
+            .fold(HashMap::new(), |mut map, Action(cycle, id, amount)| {
+                map.entry(cycle)
                     .or_default()
                     .push((id, amount));
-                }
 
-            rest
-            })
-            .unwrap_or_default();
+                map
+                });
 
         /* Assert some conditions to avoid unnecessary errors */ {
             /* Prepare variables */
@@ -155,27 +145,6 @@ impl Simulator {
         } else {
             ! args.quiet
             };
-        
-        /* Build World, and contain it inside smart pointer */
-        let Some(world_cell) = World::builder()
-            .point_list(grid)
-            .decision_points(decision)
-            .pheromone(pheromone)
-            .ants_return(returns)
-            .consume_rate(rate)
-            .select_method(select)
-            .point_preference(preference)
-            .metric(metric)
-            .dispersion_factor(dispersion, factor)
-            .build()
-            .map(|world| Rc::new(RefCell::new(world))) 
-        else {
-            eprintln!("[ERROR]: A problem occured while trying to build the world object - simulation stopped");
-            exit(1);
-            };
-
-        /* Create Anthill object */
-        let ant_hill = AntHill::new(&world_cell, ants);
 
         /* Create configuration container */
         let config = Config {
@@ -185,6 +154,17 @@ impl Simulator {
             dispersion, factor,
             seed
             };
+        
+        /* Build World, and contain it inside smart pointer */
+        let Some(world_cell) = World::new(grid, &config)
+            .map(|world| Rc::new(RefCell::new(world))) 
+        else {
+            eprintln!("[ERROR]: A problem occured while trying to build the world object - simulation stopped");
+            exit(1);
+            };
+
+        /* Create Anthill object */
+        let ant_hill = AntHill::new(&world_cell, ants);
 
         /* Create simulator */
         Self {
@@ -403,65 +383,5 @@ o> ------------------------------ <o",
         file.write_all(&to_json(&data)?.into_bytes())?;
 
         Ok(())
-        }
-    }
-
-/* Technical stuff - structure for holding, and printing simulation's configuration */
-struct Config {
-    cycles: usize,
-    ants: usize,
-    pheromone: f64,
-    decision: usize,
-    rate: u32,
-    returns: bool,
-    select: Selection,
-    preference: Preference,
-    metric: Metric,
-    dispersion: Option<Dispersion>,
-    factor: f64,
-    seed: Option<u64>
-    }
-
-impl Config {
-    fn show(&self) {
-        println!(
-"o> -------- SETTINGS -------- <o
-|            cycles: {}
-|              ants: {}
-|         pheromone: {}
-|   decision points: {}
-|   consumtion rate: {}
-|           returns: {}
-|         selection: {}
-|       calculation: {}
-|            metric: {}
-|        dispersion: {}
-| dispersion factor: {}
-|              seed: {}
-o> -------------------------- <o",
-            self.cycles, self.ants, self.pheromone, self.decision,
-            self.rate, self.returns,
-            self.select, self.preference, self.metric,
-            self.dispersion.show_or("None"), self.factor,
-            self.seed.show_or("None")
-            );
-        }
-    }
-
-/* Technical stuff - structure for holding statistics of simulation's run, and operations needed for saving this data */
-#[derive(Default, Deserialize, Serialize)]
-struct Stats {
-    completed: bool,
-    pheromone_strengths: Vec<f64>,
-    average_route_len: f64,
-    ants_per_phase: Vec<usize>,
-    average_returns: f64
-    }
-
-impl Stats {
-    fn get_pheromone_per_route(&self) -> Vec<f64> {
-        self.pheromone_strengths.iter()
-            .map(|phero| phero / self.average_returns)
-            .collect()
         }
     }

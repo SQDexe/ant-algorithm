@@ -11,6 +11,7 @@ use {
     crate::{
         consts::bias,
         tech::{
+            Config,
             DistanceFunction,
             PointInfo,
             Dispersion,
@@ -30,9 +31,8 @@ use {
 
 /* World structure, for handling most of logic operations, and managing the grid */
 pub struct World {
-    points: Vec<Point>,
-    auxils: Vec<Auxil>,
-    foods: Vec<u32>,
+    points: Box<[Point]>,
+    auxils: Box<[Auxil]>,
     anthill_id: char,
     foodsource_ids: HashSet<char>,
     number_of_decision_points: usize,
@@ -48,8 +48,62 @@ pub struct World {
 
 impl World {
     /* Get builder object */
-    pub fn builder() -> WorldBuilder {
-        WorldBuilder::default()
+    pub fn new(point_list: Vec<PointInfo>, config: &Config) -> Option<Self> {
+        let anthill_id = point_list.first()?
+            .get_id();
+
+        let foodsource_ids = point_list.iter()
+            .filter_map(|point_info|
+                point_info.has_food()
+                    .then(|| point_info.get_id())
+                )
+            .collect();
+
+        let (points, auxils): (Vec<_>, Vec<_>) = point_list.into_iter()
+            .map(|point_info| (
+                Point::from(point_info),
+                Auxil::new('\0', bias::UNKOWN)
+                ))
+            .unzip();
+
+        let world = World {
+            points: points.into_boxed_slice(),
+            auxils: auxils.into_boxed_slice(),
+            anthill_id,
+            foodsource_ids,
+            number_of_decision_points: config.decision,
+            pheromone: config.pheromone,
+            ants_return: config.returns,
+            consume_rate: config.rate,
+            get_index_operation: match config.select {
+                Selection::Random => World::select_randomly,
+                Selection::Roulette => World::select_roulette,
+                Selection::Greedy => World::select_greedy
+                },
+            preference_operation: match config.preference {
+                Preference::Distance => preference::distance,
+                Preference::Pheromone => preference::pheromone,
+                Preference::Food => preference::food,
+                Preference::PD => preference::phero_dist,
+                Preference::FD => preference::food_dist,
+                Preference::PF => preference::phero_food,
+                Preference::PFD => preference::phero_food_dist
+                },
+            distance_operation: match config.metric {
+                Metric::Chebyshev => distance::chebyshev,
+                Metric::Euclidean => distance::euclidean,
+                Metric::Taxicab => distance::taxicab
+                },
+            disperse_operation: match config.dispersion {
+                Some(Dispersion::Linear) => disperse::linear,
+                Some(Dispersion::Exponential) => disperse::exponential,
+                Some(Dispersion::Relative) => disperse::relative,
+                _ => |_, _| bias::UNKOWN
+                },
+            factor: config.factor
+            };
+
+        Some(world)
         }
 
     /* Selection methods */
@@ -111,19 +165,6 @@ impl World {
         for point in &mut self.points {
             point.pheromone = func(point, self.factor).max(0.0)
             };
-        }
-
-    /* Reset all pheromones to zero */
-    fn reset_pheromons(&mut self) {
-        self.set_pheromones(|_, _| 0.0);
-        }
-
-    /* Reset all foodsources to original state */
-    fn reset_points(&mut self) {
-        for (point, &food) in self.points.iter_mut()
-        .zip(self.foods.iter()) {
-            point.food = food;
-            }
         }
 
     /* Create new position according to passed arguments */
@@ -229,10 +270,10 @@ impl World {
         self.foodsource_ids.contains(position_id)
         }
 
-    /* Reset points to original state */
+    /* Reset points to original state - food, and pheromones */
     pub fn reset(&mut self) {
-        self.reset_pheromons();
-        self.reset_points();
+        self.points.iter_mut()
+            .for_each(Point::reset);
         }
 
     /* Show a table of states of all points */
@@ -278,134 +319,5 @@ impl World {
         self.points.iter()
             .map(|point| point.pheromone)
             .collect()
-        }
-    }
-
-
-/* Technical stuff - World builder */
-#[derive(Default)]
-pub struct WorldBuilder {
-    point_list: Option<Vec<PointInfo>>,
-    number_of_decision_points: Option<usize>,
-    pheromone: Option<f64>,
-    consume_rate: Option<u32>,
-    ants_return: Option<bool>,
-    select_method: Option<Selection>,
-    point_preference: Option<Preference>,
-    metric: Option<Metric>,
-    dispersion_method: Option<Dispersion>,
-    factor: f64,
-    }
-
-/* Technical stuff - World builder */
-impl WorldBuilder {
-    /* Technical stuff - World builder */
-    pub fn build(self) -> Option<World> {
-        let point_list = self.point_list?;
-
-        let anthill_id = point_list.iter()
-            .next()?
-            .get_id();
-
-        let foodsource_ids = HashSet::from_iter(
-            point_list.iter()
-                .filter_map(|point_info| match point_info {
-                    &PointInfo::Food(.., 0) => None,
-                    &PointInfo::Food(id, ..) => Some(id),
-                    _ => None
-                    })
-            );
-
-        let (points, auxils): (Vec<_>, Vec<_>) = point_list.into_iter()
-            .map(|point_info| (
-                match point_info {
-                    PointInfo::Empty(id, x, y) => Point::new(id, x, y, 0),
-                    PointInfo::Food(id, x, y, food) => Point::new(id, x, y, food)    
-                    },
-                Auxil::new('\0', bias::UNKOWN)
-                ))
-            .unzip();
-
-        let foods = points.iter()
-            .map(|point| point.food)
-            .collect();
-
-        let world = World {
-            points,
-            auxils,
-            foods,
-            anthill_id,
-            foodsource_ids,
-            number_of_decision_points: self.number_of_decision_points?,
-            pheromone: self.pheromone?,
-            ants_return: self.ants_return?,
-            consume_rate: self.consume_rate?,
-            get_index_operation: match self.select_method? {
-                Selection::Random => World::select_randomly,
-                Selection::Roulette => World::select_roulette,
-                Selection::Greedy => World::select_greedy
-                },
-            preference_operation: match self.point_preference? {
-                Preference::Distance => preference::distance,
-                Preference::Pheromone => preference::pheromone,
-                Preference::Food => preference::food,
-                Preference::PD => preference::phero_dist,
-                Preference::FD => preference::food_dist,
-                Preference::PF => preference::phero_food,
-                Preference::PFD => preference::phero_food_dist
-                },
-            distance_operation: match self.metric? {
-                Metric::Chebyshev => distance::chebyshev,
-                Metric::Euclidean => distance::euclidean,
-                Metric::Taxicab => distance::taxicab
-                },
-            disperse_operation: match self.dispersion_method {
-                Some(Dispersion::Linear) => disperse::linear,
-                Some(Dispersion::Exponential) => disperse::exponential,
-                Some(Dispersion::Relative) => disperse::relative,
-                _ => |_, _| bias::UNKOWN
-                },
-            factor: self.factor
-            };
-
-        Some(world)
-        }
-
-    /* Setters */
-    pub fn point_list(mut self, point_list: Vec<PointInfo>) -> Self {
-        self.point_list = Some(point_list);
-        self
-        }
-    pub const fn decision_points(mut self, number_of_decision_points: usize) -> Self {
-        self.number_of_decision_points = Some(number_of_decision_points);
-        self
-        }
-    pub const fn pheromone(mut self, pheromone: f64) -> Self {
-        self.pheromone = Some(pheromone);
-        self
-        }
-    pub const fn ants_return(mut self, ants_return: bool) -> Self {
-        self.ants_return = Some(ants_return);
-        self
-        }
-    pub const fn consume_rate(mut self, consume_rate: u32) -> Self {
-        self.consume_rate = Some(consume_rate);
-        self
-        }
-    pub const fn select_method(mut self, select_method: Selection) -> Self {
-        self.select_method = Some(select_method);
-        self
-        }
-    pub const fn point_preference(mut self, point_preference: Preference) -> Self {
-        self.point_preference = Some(point_preference);
-        self
-        }
-    pub const fn metric(mut self, metric: Metric) -> Self {
-        self.metric = Some(metric);
-        self
-        }
-    pub const fn dispersion_factor(mut self, dispersion_method: Option<Dispersion>, factor: f64) -> Self {
-        (self.dispersion_method, self.factor) = (dispersion_method, factor);
-        self
         }
     }

@@ -1,3 +1,55 @@
+use crate::tech::PointInfo;
+
+/* Point structure, for holding basic point data */
+pub struct Point {
+    pub id: char,
+    pub x: i16,
+    pub y: i16,
+    pub pheromone: f64,
+    pub food: u32,
+    og_food: u32
+    }
+
+impl Point {
+    #[inline]
+    pub const fn new(id: char, x: i16, y: i16, food: u32) -> Self {
+        Point {
+            id, x, y, food,
+            pheromone: 0.0,
+            og_food: food
+            }
+        }
+
+    pub const fn reset(&mut self) {
+        self.food = self.og_food;
+        self.pheromone = 0.0;
+        }
+    }
+
+impl From<PointInfo> for Point {
+    fn from(value: PointInfo) -> Self {
+        match value {
+            PointInfo::Empty(id, x, y) =>
+                Point::new(id, x, y, 0),
+            PointInfo::Food(id, x, y, food) =>
+                Point::new(id, x, y, food)    
+            }
+        }
+    }
+
+/* Auxil structure, for calculation puropses */
+pub struct Auxil {
+    pub id: char,
+    pub ratio: f64
+    }
+
+impl Auxil {
+    #[inline]
+    pub const fn new(id: char, ratio: f64) -> Self {
+        Auxil { id, ratio }
+        }
+    }
+
 /* Functions for calulating distance in metric */
 pub mod distance {
     #[inline]
@@ -63,33 +115,4 @@ pub mod preference {
         { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) }
     pub fn phero_food_dist(point: &Point, x: i16, y: i16, dist_func: DistanceFunction) -> f64
         { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) / dist_func(x, y, point.x, point.y) }
-    }
-
-/* Point structure, for holding basic point data */
-pub struct Point {
-    pub id: char,
-    pub x: i16,
-    pub y: i16,
-    pub pheromone: f64,
-    pub food: u32
-    }
-
-impl Point {
-    #[inline]
-    pub const fn new(id: char, x: i16, y: i16, food: u32) -> Self {
-        Point { id, x, y, food, pheromone: 0.0 }
-        }
-    }
-
-/* Auxil structure, for calculation puropses */
-pub struct Auxil {
-    pub id: char,
-    pub ratio: f64
-    }
-
-impl Auxil {
-    #[inline]
-    pub const fn new(id: char, ratio: f64) -> Self {
-        Auxil { id, ratio }
-        }
     }
