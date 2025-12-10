@@ -19,7 +19,6 @@ use {
             Write
             },
         path::Path,
-        process::exit,
         rc::Rc
         },
     core::cell::RefCell,
@@ -155,12 +154,10 @@ impl Simulator {
             seed
             };
         
-        /* Build World, and contain it inside smart pointer */
-        let Some(world_cell) = World::new(grid, &config)
-            .map(|world| Rc::new(RefCell::new(world))) 
-        else {
-            eprintln!("[ERROR]: A problem occured while trying to build the world object - simulation stopped");
-            exit(1);
+        /* Create World, and contain it inside smart pointer */
+        let world_cell = {
+            let world = World::new(grid, &config);
+            Rc::new(RefCell::new(world))
             };
 
         /* Create Anthill object */

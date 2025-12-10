@@ -48,9 +48,13 @@ pub struct World {
 
 impl World {
     /* Get builder object */
-    pub fn new(point_list: Vec<PointInfo>, config: &Config) -> Option<Self> {
-        let anthill_id = point_list.first()?
-            .get_id();
+    pub fn new(point_list: Vec<PointInfo>, config: &Config) -> Self {
+        /* Unsafe note - unwrap is safe, because the route will never be empty, and the first point is always the anthill */
+        let anthill_id = unsafe {
+            point_list.first()
+                .unwrap_unchecked()
+                .get_id()
+            };
 
         let foodsource_ids = point_list.iter()
             .filter_map(|point_info|
@@ -66,7 +70,7 @@ impl World {
                 ))
             .unzip();
 
-        let world = World {
+        Self {
             points: points.into_boxed_slice(),
             auxils: auxils.into_boxed_slice(),
             anthill_id,
@@ -101,9 +105,7 @@ impl World {
                 _ => |_, _| bias::UNKOWN
                 },
             factor: config.factor
-            };
-
-        Some(world)
+            }
         }
 
     /* Selection methods */
