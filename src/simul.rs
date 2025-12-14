@@ -155,10 +155,8 @@ impl Simulator {
             };
         
         /* Create World, and contain it inside smart pointer */
-        let world_cell = {
-            let world = World::new(grid, &config);
-            Rc::new(RefCell::new(world))
-            };
+        let world_cell = World::new(grid, &config)
+            .into();
 
         /* Create Anthill object */
         let ant_hill = AntHill::new(&world_cell, ants);

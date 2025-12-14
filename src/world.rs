@@ -28,6 +28,8 @@ use {
             }
         }
     };
+use std::rc::Rc;
+use std::cell::RefCell;
 
 /* World structure, for handling most of logic operations, and managing the grid */
 pub struct World {
@@ -321,5 +323,12 @@ impl World {
         self.points.iter()
             .map(|point| point.pheromone)
             .collect()
+        }
+    }
+
+/* Technical stuff - shorthand for creating smart pointer */
+impl From<World> for Rc<RefCell<World>> {
+    fn from(value: World) -> Self {
+        Rc::new(RefCell::new(value))
         }
     }
