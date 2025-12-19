@@ -73,7 +73,7 @@ impl Simulator {
             );
         let actions: HashMap<_, Vec<_>> = actions.into_iter()
             .flatten()
-            .fold(HashMap::new(), |mut map, Action(cycle, id, amount)| {
+            .fold(HashMap::with_capacity(cycles), |mut map, Action(cycle, id, amount)| {
                 map.entry(cycle)
                     .or_default()
                     .push((id, amount));

@@ -13,7 +13,7 @@ pub struct Point {
 impl Point {
     #[inline]
     pub const fn new(id: char, x: i16, y: i16, food: u32) -> Self {
-        Point {
+        Self {
             id, x, y, food,
             pheromone: 0.0,
             og_food: food
@@ -30,9 +30,9 @@ impl From<PointInfo> for Point {
     fn from(value: PointInfo) -> Self {
         match value {
             PointInfo::Empty(id, x, y) =>
-                Point::new(id, x, y, 0),
+                Self::new(id, x, y, 0),
             PointInfo::Food(id, x, y, food) =>
-                Point::new(id, x, y, food)    
+                Self::new(id, x, y, food)    
             }
         }
     }
@@ -46,7 +46,7 @@ pub struct Auxil {
 impl Auxil {
     #[inline]
     pub const fn new(id: char, ratio: f64) -> Self {
-        Auxil { id, ratio }
+        Self { id, ratio }
         }
     }
 

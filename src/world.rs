@@ -6,8 +6,10 @@ use {
     sqds_tools::select,
     std::{
         collections::HashSet,
-        process::exit
+        process::exit,
+        rc::Rc
         },
+    core::cell::RefCell,
     crate::{
         consts::bias,
         tech::{
@@ -28,8 +30,6 @@ use {
             }
         }
     };
-use std::rc::Rc;
-use std::cell::RefCell;
 
 /* World structure, for handling most of logic operations, and managing the grid */
 pub struct World {
@@ -61,7 +61,7 @@ impl World {
         let foodsource_ids = point_list.iter()
             .filter_map(|point_info|
                 point_info.has_food()
-                    .then(|| point_info.get_id())
+                    .then_some(point_info.get_id())
                 )
             .collect();
 
@@ -119,7 +119,7 @@ impl World {
         }
     fn select_roulette(&self) -> usize {
         /* Get helper array */
-        let wheel: Vec<f64> = {
+        let wheel: Box<[f64]> = {
             let iter = self.auxils.iter()
                 .take(self.number_of_decision_points)
                 .map(|Auxil { ratio, ..}| ratio);
