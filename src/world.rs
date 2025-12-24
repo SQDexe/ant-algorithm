@@ -37,6 +37,7 @@ pub struct World {
     auxils: Box<[Auxil]>,
     anthill_id: char,
     foodsource_ids: HashSet<char>,
+    start_foodsources: Box<[char]>,
     number_of_decision_points: usize,
     pheromone: f64,
     consume_rate: u32,
@@ -58,12 +59,15 @@ impl World {
                 .get_id()
             };
 
-        let foodsource_ids = point_list.iter()
+        let start_foodsources: Box<[_]> = point_list.iter()
             .filter_map(|point_info|
                 point_info.has_food()
                     .then_some(point_info.get_id())
                 )
             .collect();
+
+        let mut foodsource_ids = HashSet::with_capacity(start_foodsources.len());
+        foodsource_ids.extend(start_foodsources.iter());
 
         let (points, auxils): (Vec<_>, Vec<_>) = point_list.into_iter()
             .map(|point_info| (
@@ -77,6 +81,7 @@ impl World {
             auxils: auxils.into_boxed_slice(),
             anthill_id,
             foodsource_ids,
+            start_foodsources,
             number_of_decision_points: config.decision,
             pheromone: config.pheromone,
             ants_return: config.returns,
@@ -166,7 +171,7 @@ impl World {
 
     /* Set pheromones according to passed function */
     fn set_pheromones(&mut self, func: fn (&Point, f64) -> f64) {
-        for point in &mut self.points {
+        for point in self.points.iter_mut() {
             point.pheromone = func(point, self.factor).max(0.0)
             };
         }
@@ -278,6 +283,9 @@ impl World {
     pub fn reset(&mut self) {
         self.points.iter_mut()
             .for_each(Point::reset);
+        
+        self.foodsource_ids.clear();
+        self.foodsource_ids.extend(self.start_foodsources.iter());
         }
 
     /* Show a table of states of all points */

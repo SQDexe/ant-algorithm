@@ -5,7 +5,7 @@ use {
     };
 
 fn main() {
-    if let Ok("windows") = var("CARGO_CFG_TARGET_OS").as_deref() {
+    if Ok("windows") == var("CARGO_CFG_TARGET_OS").as_deref() {
         WindowsResource::new()
             .set_icon("./assets/icon.ico")
             .set_language(LANG_ENGLISH)

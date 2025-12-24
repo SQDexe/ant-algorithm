@@ -7,7 +7,7 @@ pub struct Point {
     pub y: i16,
     pub pheromone: f64,
     pub food: u32,
-    og_food: u32
+    start_food: u32
     }
 
 impl Point {
@@ -16,12 +16,12 @@ impl Point {
         Self {
             id, x, y, food,
             pheromone: 0.0,
-            og_food: food
+            start_food: food
             }
         }
 
     pub const fn reset(&mut self) {
-        self.food = self.og_food;
+        self.food = self.start_food;
         self.pheromone = 0.0;
         }
     }
