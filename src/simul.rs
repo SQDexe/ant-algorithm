@@ -27,6 +27,7 @@ use {
         args::Args,
         consts::{
             bias,
+            limits,
             GRID
             },
         tech::{
@@ -83,7 +84,6 @@ impl Simulator {
 
         /* Assert some conditions to avoid unnecessary errors */ {
             /* Prepare variables */
-            let valid_grid_range = -99 ..= 99;
             let num_of_points = grid.len();
             let (point_ids, point_pos): (HashSet<_>, HashSet<_>) = grid.iter()
                 .map(|point| (point.get_id(), point.get_position()))
@@ -94,19 +94,22 @@ impl Simulator {
                 .collect();
 
             /* Prepare assertion variables */
-            let resonable_num_of_points = (2 .. 1000).contains(&num_of_points);
+            let resonable_num_of_points = limits::POINTS_RNAGE.contains(&num_of_points);
             let points_have_unique_ids = point_ids.len() == num_of_points;
             let points_have_unique_postions = point_pos.len() == num_of_points;
             let points_inside_gird = point_pos.iter()
-                .all(|(x, y)| valid_grid_range.contains(x) && valid_grid_range.contains(y));
+                .all(|(x, y)|
+                    limits::GRID_RANGE.contains(x) &&
+                    limits::GRID_RANGE.contains(y)
+                    );
             let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision);
-            let resonable_num_of_ants = (1 ..= 0xffffff).contains(&ants);
-            let resonable_num_of_cycles = (1 .. 100).contains(&cycles);
-            let positive_nonzero_pheromone_strength = 0.0 < pheromone;
+            let resonable_num_of_ants = limits::ANTS_RANGE.contains(&ants);
+            let resonable_num_of_cycles = limits::CYCLES_RANGE.contains(&cycles);
+            let positive_nonzero_pheromone_strength = limits::PHERO_RANGE.contains(&pheromone);
             let unset_or_correct_dispersion_factor = match (dispersion, factor) {
-                (Some(Dispersion::Linear), 0.0 ..) => true,
-                (Some(Dispersion::Exponential), 1.0 ..) => true,
-                (Some(Dispersion::Relative), 0.0 ..= 1.0) => true,
+                (Some(Dispersion::Linear), value) if limits::DISP_LINEAR_RANGE.contains(&value) => true,
+                (Some(Dispersion::Exponential), value) if limits::DISP_EXPONENTIAL_RANGE.contains(&value) => true,
+                (Some(Dispersion::Relative), value) if limits::DISP_RELATIVE_RANGE.contains(&value) => true,
                 (None, value) if value.is_nan() => true,
                 _ => false
                 };
@@ -115,7 +118,7 @@ impl Simulator {
                 let anthill = &grid[0];
                 ! (anthill.has_food() || actions_ids.contains(&anthill.get_id()))
                 };
-            let resonable_batch_size = (1 .. 1000).contains(&batch);
+            let resonable_batch_size = limits::BATCH_RANGE.contains(&batch);
 
             /* Assert! */
             batch_assert!(

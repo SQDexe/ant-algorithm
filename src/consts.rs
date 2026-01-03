@@ -43,3 +43,22 @@ pub mod bias {
     /* changed from 1e-6_f64 */
     pub const MINUTE: f64 = f64::MIN_POSITIVE;
     }
+
+/* Limitations for arguments */
+pub mod limits {
+    use core::ops::{
+        Range,
+        RangeFrom,
+        RangeInclusive
+        };
+
+    pub const GRID_RANGE: RangeInclusive<i16> = -99 ..= 99;
+    pub const POINTS_RNAGE: Range<usize> = 2 .. 1000;
+    pub const ANTS_RANGE: RangeInclusive<usize> = 1 ..= 0xffffff;
+    pub const CYCLES_RANGE: Range<usize> = 1 .. 100;
+    pub const PHERO_RANGE: RangeFrom<f64> = 0.0 ..;
+    pub const BATCH_RANGE: Range<usize> = 1 .. 1000;
+    pub const DISP_LINEAR_RANGE: RangeFrom<f64> = 0.0 ..;
+    pub const DISP_EXPONENTIAL_RANGE: RangeFrom<f64> = 1.0 ..;
+    pub const DISP_RELATIVE_RANGE: RangeInclusive<f64> = 0.0 ..= 1.0;
+    }
