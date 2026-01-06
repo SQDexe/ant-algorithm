@@ -10,11 +10,11 @@ license = "Unlicense"
 
 [dependencies]
 anyhow = "1.0.100"
-clap = { version = "4.5.53", features = ["derive"] }
-derive_more = { version = "2.1.0", default-features = false, features = ["display"] }
+clap = { version = "4.5.54", features = ["derive"] }
+derive_more = { version = "2.1.1", default-features = false, features = ["display"] }
 fastrand = "2.3.0"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
+serde_json = "1.0.148"
 sqds-tools = { git = "https://github.com/SQDexe/sqds-tools", tag = "v1.1.0" }
 tinyvec = "1.10.0"
 
