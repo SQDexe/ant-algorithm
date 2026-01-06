@@ -9,7 +9,7 @@ use {
         Deserialize,
         Serialize
         },
-    show_option::ShowOption,
+    sqds_tools::ShowOption,
     core::str::FromStr
     };
 
@@ -180,8 +180,8 @@ o> -------------------------- <o",
             self.cycles, self.ants, self.pheromone, self.decision,
             self.rate, self.returns,
             self.select, self.preference, self.metric,
-            self.dispersion.show_or("None"), self.factor,
-            self.seed.show_or("None")
+            self.dispersion.show_or_none(), self.factor,
+            self.seed.show_or_none()
             );
         }
     }
@@ -201,19 +201,5 @@ impl Stats {
         self.pheromone_strengths.iter()
             .map(|phero| phero / self.average_returns)
             .collect()
-        }
-    }
-
-/* Technical stuff - collect data for printing */
-pub trait ToDisplay: Iterator {
-    fn to_display(self, sep: &str) -> String;
-    }
-
-impl<T, I> ToDisplay for I
-where T: ToString, I: Iterator<Item = T> {
-    fn to_display(self, sep: &str) -> String {
-        self.map(|e| e.to_string())
-            .collect::<Box<[_]>>()
-            .join(sep)
         }
     }

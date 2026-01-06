@@ -3,6 +3,7 @@ use {
         f64 as random_f64,
         usize as random_usize
         },
+    tinyvec::ArrayVec,
     sqds_tools::select,
     std::{
         collections::HashSet,
@@ -11,7 +12,10 @@ use {
         },
     core::cell::RefCell,
     crate::{
-        consts::bias,
+        consts::{
+            bias,
+            limits::MAX_POINTS
+            },
         tech::{
             Config,
             DistanceFunction,
@@ -124,7 +128,7 @@ impl World {
         }
     fn select_roulette(&self) -> usize {
         /* Get helper array */
-        let wheel: Box<[f64]> = {
+        let wheel: ArrayVec<[f64; MAX_POINTS]> = {
             let iter = self.auxils.iter()
                 .take(self.number_of_decision_points)
                 .map(|Auxil { ratio, ..}| ratio);

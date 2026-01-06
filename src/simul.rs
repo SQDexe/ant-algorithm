@@ -6,7 +6,8 @@ use {
         },
     sqds_tools::{
         select,
-        batch_assert
+        batch_assert,
+        ShowSlice
         },
     std::{
         collections::{
@@ -33,7 +34,6 @@ use {
         tech::{
             Action,
             Config,
-            ToDisplay,
             Dispersion,
             Stats
             },
@@ -251,18 +251,18 @@ impl Simulator {
         println!(
 "o> --------- STATISTICS --------- <o
 |        all reached goal: {}
-|    pheromones per point: [{}]
+|    pheromones per point: {}
 |    average route length: {}
-| satiated ants per phase: [{}]
+| satiated ants per phase: {}
 |  average routes per ant: {}
-|    pheromones per route: [{}]
+|    pheromones per route: {}
 o> ------------------------------ <o",
             stats.completed,
-            stats.pheromone_strengths.iter().to_display(", "),
+            stats.pheromone_strengths.show_slice(),
             stats.average_route_len,
-            stats.ants_per_phase.iter().to_display(", "),
+            stats.ants_per_phase.show_slice(),
             stats.average_returns,
-            stats.get_pheromone_per_route().iter().to_display(", ")
+            stats.get_pheromone_per_route().show_slice()
             );
         }
     
@@ -280,19 +280,19 @@ o> ------------------------------ <o",
         println!(
 "o> ------ AVG STATS OF {:>3} ------ <o
 |  total completed routes: {}
-|    pheromones per point: [{}]
+|    pheromones per point: {}
 |    average route length: {}
-| satiated ants per phase: [{}]
+| satiated ants per phase: {}
 |  average routes per ant: {}
-|    pheromones per route: [{}]
+|    pheromones per route: {}
 o> ------------------------------ <o",
             self.batch_size,
             times,
-            pheromone_strengths.iter().to_display(", "),
+            pheromone_strengths.show_slice(),
             route_len,
-            ants_per_phase.iter().to_display(", "),
+            ants_per_phase.show_slice(),
             returns,
-            pheromone_per_route.iter().to_display(", ")
+            pheromone_per_route.show_slice()
             );
         }
 

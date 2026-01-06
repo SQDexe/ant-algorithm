@@ -52,8 +52,9 @@ pub mod limits {
         RangeInclusive
         };
 
+    pub const MAX_POINTS: usize = 1000;
     pub const GRID_RANGE: RangeInclusive<i16> = -99 ..= 99;
-    pub const POINTS_RNAGE: Range<usize> = 2 .. 1000;
+    pub const POINTS_RNAGE: Range<usize> = 2 .. MAX_POINTS;
     pub const ANTS_RANGE: RangeInclusive<usize> = 1 ..= 0xffffff;
     pub const CYCLES_RANGE: Range<usize> = 1 .. 100;
     pub const PHERO_RANGE: RangeFrom<f64> = 0.0 ..;
