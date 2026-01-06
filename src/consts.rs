@@ -1,8 +1,7 @@
 use crate::tech::PointInfo;
 
-/* Default world setup */
-const NUM_OF_POINTS: usize = 7;
-pub const GRID: [PointInfo; NUM_OF_POINTS] = [
+/** Default world grid. */
+pub const GRID: [PointInfo; 7] = [
     PointInfo::Empty('a', 6, 1),
     PointInfo::Empty('b', 13, 1),
     PointInfo::Empty('c', 4, 3),
@@ -12,7 +11,7 @@ pub const GRID: [PointInfo; NUM_OF_POINTS] = [
     PointInfo::Food('g', 10, 8, 15)
     ];
 
-/* Default simulation settings */
+/** Default simulation settings. */
 pub mod default {
     use crate::tech::{
         Preference,
@@ -20,31 +19,45 @@ pub mod default {
         Metric
         };
 
+    /** Default number of cycles. */
     pub const NUM_OF_CYCLES: usize = 8;
+    /** Default number of ants. */
     pub const NUM_OF_ANTS: usize = 15;
+    /** Default number of decisin points. */
     pub const NUM_OF_DECISION_POINTS: usize = 3;
+    /** Default pheromone strength. */
     pub const PHERO_STRENGTH: f64 = 1.0;
+    /** Default return behaviour. */
     pub const RETURN_BEHAVIOUR: bool = false;
+    /** Default food consuming rate. */
     pub const CONSUME_RATE: u32 = 0;
+    /** Default point selection method. */
     pub const SELECT_METHOD: Selection = Selection::Roulette;
+    /** Default point preference method. */
     pub const PREFERENCE_METHOD: Preference = Preference::PD;
+    /** Default distance calculation metric. */
     pub const METRIC: Metric = Metric::Euclidean;
+    /** Default logging behaviour. */
     pub const QUIET: bool = false;
+    /** Default computation duration logging behaviour. */
     pub const TIMING: bool = false;
+    /** Default number of simulation repetitions. */
     pub const BATCH_SIZE: usize = 1;
     }
 
-/* Values for different kinds of calculations */
+/** Values for different kinds of calculations. */
 pub mod bias {
+    /** Neutral bias */
     pub const NEUTRAL: f64 = 1.0;
+    /** Unknown value */
     pub const UNKOWN: f64 = f64::NAN;
-    /* changed from 1e6_f64 */
+    /** Maximal bias, changed from `1e6_f64` */
     pub const GREAT: f64 = f64::MAX;
-    /* changed from 1e-6_f64 */
+    /** Minimal bias, changed from `1e-6_f64` */
     pub const MINUTE: f64 = f64::MIN_POSITIVE;
     }
 
-/* Limitations for arguments */
+/** Limitations for arguments. */
 pub mod limits {
     use core::ops::{
         Range,
@@ -52,14 +65,22 @@ pub mod limits {
         RangeInclusive
         };
 
-    pub const MAX_POINTS: usize = 1000;
+    /** Allowed range for point coordinates. */
     pub const GRID_RANGE: RangeInclusive<i16> = -99 ..= 99;
-    pub const POINTS_RNAGE: Range<usize> = 2 .. MAX_POINTS;
+    /** Allowed range for number of points. */
+    pub const POINTS_RANGE: Range<usize> = 2 .. 1000;
+    /** Allowed range for number of ants. */
     pub const ANTS_RANGE: RangeInclusive<usize> = 1 ..= 0xffffff;
+    /** Allowed range for number of cycles. */
     pub const CYCLES_RANGE: Range<usize> = 1 .. 100;
+    /** Allowed range for pheromone strength. */
     pub const PHERO_RANGE: RangeFrom<f64> = 0.0 ..;
+    /** Allowed range for simulation repetitions. */
     pub const BATCH_RANGE: Range<usize> = 1 .. 1000;
+    /** Allowed range for linear dispersion coefficient. */
     pub const DISP_LINEAR_RANGE: RangeFrom<f64> = 0.0 ..;
+    /** Allowed range for exponential dispersion coefficient. */
     pub const DISP_EXPONENTIAL_RANGE: RangeFrom<f64> = 1.0 ..;
+    /** Allowed range for relative dispersion coefficient. */
     pub const DISP_RELATIVE_RANGE: RangeInclusive<f64> = 0.0 ..= 1.0;
     }

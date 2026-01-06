@@ -41,20 +41,28 @@ use {
         }
     };
 
-/* Simulation structure, for managing the instatiating, asserting correct configuration, simulation running, prinitng, and saving data */
+/** `Simulation` structure, for managing the instatiating, asserting correct configuration, simulation running, prinitng, and saving data. */
 pub struct Simulator {
+    /** Whether logging should happen. */
     logs: bool,
+    /** Number or repetitions. */
     batch_size: usize,
+    /** Simulation's configuration. */
     config: Config,
+    /** Amount of food to add on corresponding cycle, and point. */
     actions: HashMap<usize, Vec<(char, u32)>>,
+    /** The colony of ants. */
     ant_hill: AntHill,
+    /** World space object. */
     world_cell: Rc<RefCell<World>>,
+    /** Statistics for each simulation run. */
     stats: Vec<Stats>,
+    /** Operation for showing the statistics. */
     show_operation: fn (&Self)
     }
 
 impl Simulator {
-    /* Constructor */
+    /** Constructor. */
     pub fn new(args: Args) -> Self {
         /* Unpack arguments */
         let Args {
@@ -94,7 +102,7 @@ impl Simulator {
                 .collect();
 
             /* Prepare assertion variables */
-            let resonable_num_of_points = limits::POINTS_RNAGE.contains(&num_of_points);
+            let resonable_num_of_points = limits::POINTS_RANGE.contains(&num_of_points);
             let points_have_unique_ids = point_ids.len() == num_of_points;
             let points_have_unique_postions = point_pos.len() == num_of_points;
             let points_inside_gird = point_pos.iter()
@@ -180,7 +188,7 @@ impl Simulator {
             }
         }
 
-    /* Run simulation */
+    /** Run the simulation. */
     pub fn simulate(&mut self) {
         /* Simulate number of times */
         for _ in 0 .. self.batch_size {
@@ -244,7 +252,7 @@ impl Simulator {
             }
         }
     
-    /* Show once for singular simulation */
+    /** Show operation for singular simulation. */
     fn show_one(&self) {
         let stats = &self.stats[0];
 
@@ -266,7 +274,7 @@ o> ------------------------------ <o",
             );
         }
     
-    /* Show average for batch simulation */
+    /** Show operation for averages of a batch simulation. */
     fn show_avg(&self) {
         let (
             times,
@@ -296,7 +304,7 @@ o> ------------------------------ <o",
             );
         }
 
-    /* Gets average statistics for whole batch */
+    /** `average_stats` getter */
     fn get_average_stats(&self) -> (usize, Vec<f64>, f64, Vec<f64>, f64, Vec<f64>) {
         let number_of_points = self.world_cell.borrow()
             .get_number_of_points();
@@ -340,7 +348,7 @@ o> ------------------------------ <o",
         ( total_complete_routes, avg_pheromone_strengths, avg_route_len, avg_ants_per_phase, avg_returns, avg_pheromone_per_route )
         }
 
-    /* Show the simulation's summary */
+    /** Show the simulation's summary. */
     pub fn show(&self) {
         /* Show world grid */
         self.world_cell.borrow()
@@ -353,7 +361,7 @@ o> ------------------------------ <o",
         (self.show_operation)(self);
         }
 
-    /* Write statistics to file */
+    /** Write statistics to file. */
     pub fn write_to_file(&mut self, absolute_path: &Path) -> DynResult<()> {
         /* EMpty statistics container */
         let mut data = Vec::with_capacity(self.batch_size);

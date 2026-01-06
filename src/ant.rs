@@ -4,16 +4,20 @@ use {
     crate::world::World
     };
 
-/* Ant structure, basic logical unit */
+/** `Ant` structure, basic logical unit. */
 pub struct Ant {
+    /** Mutable, refrence to the `World` structure. */
     world_cell: Rc<RefCell<World>>,
+    /** Check, whether the ant found food. */
     satiated: bool,
+    /** Ant's current route. */
     route: String,
+    /** Number of routes the ant went through. */
     routes_counter: u8
     }
 
 impl Ant {
-    /* Constructor */
+    /** Constructor. */
     pub fn new(anthill_id: char, world_cell: Rc<RefCell<World>>) -> Self {
         Self {
             world_cell,
@@ -23,7 +27,7 @@ impl Ant {
             }
         }
     
-    /* Logic methods */
+    /** Action logic method. */
     pub fn action(&mut self) {
         /* Abort if satiated */
         if self.satiated {
@@ -67,7 +71,7 @@ impl Ant {
             }
         }
 
-    /* Reset the postion, route, and unmark the ant */
+    /** Reset the postion, route, and unmark the ant. */
     fn reset_position(&mut self) {
         let anthill = self.world_cell.borrow()
             .get_anthill();
@@ -76,22 +80,25 @@ impl Ant {
         self.route = anthill.to_string();
         }
 
-    /* Reset the position, and the counter */
+    /** Reset the position, and the counter. */
     pub fn reset(&mut self) {
         self.reset_position();
         self.routes_counter = 0;
         }
 
-    /* Getters */
+    /** `satiated` getter. */
     #[inline]
     pub const fn is_satiated(&self) -> bool
         { self.satiated }
+    /** `route` getter. */
     #[inline]
     pub fn get_route(&self) -> &str
         { &self.route }
+    /** `route`'s length getter. */
     #[inline]
     pub const fn get_route_length(&self) -> usize
         { self.route.len() }
+    /** `route_counter` getter. */
     #[inline]
     pub const fn get_routes_count(&self) -> u8
         { self.routes_counter }

@@ -14,7 +14,7 @@ use {
         }
     };
 
-/* Technical stuff - parsing, and storing of the CL arguments */
+/** **Technical part** - parsing, and storing of the CL arguments. */
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Args {

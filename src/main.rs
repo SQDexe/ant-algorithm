@@ -20,6 +20,7 @@ use {
         }
     };
 
+/** Entry point of the program. */
 fn main() {    
     /* Parse the CL arguments */
     let mut args = Args::parse();

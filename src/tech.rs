@@ -13,10 +13,10 @@ use {
     core::str::FromStr
     };
 
-/* Technical stuff - alias for distance calculation function */
+/** **Technical part** - alias for distance calculation function. */
 pub type DistanceFunction = fn (i16, i16, i16, i16) -> f64;
 
-/* Technical stuff - type of next point selection enum */
+/* **Technical part** - type of next point selection enum. */
 #[derive(Clone, Copy, Display, ValueEnum)]
 pub enum Selection {
     Greedy,
@@ -24,10 +24,11 @@ pub enum Selection {
     Roulette
     }
 
-/* Technical stuff - ways of calculating preference for the points enum:
-P - Pheromone
-F - Food
-D - Distance
+/**
+**Technical part** - ways of calculating preference for the points enum:
+- P - Pheromone
+- F - Food
+- D - Distance
 */
 #[derive(Clone, Copy, Display, ValueEnum)]
 pub enum Preference {
@@ -40,7 +41,7 @@ pub enum Preference {
     PFD
     }
 
-/* Technical stuff - types of metrics for distance calculation enum */
+/** **Technical part** - types of metrics for distance calculation enum. */
 #[derive(Clone, Copy, Display, ValueEnum)]
 pub enum Metric {
     Chebyshev,
@@ -48,7 +49,7 @@ pub enum Metric {
     Taxicab
     }
 
-/* Technical stuff - types of pheromone dispersion enum */
+/** **Technical part** - types of pheromone dispersion enum. */
 #[derive(Clone, Copy, Display, ValueEnum)]
 pub enum Dispersion {
     Linear,
@@ -56,7 +57,7 @@ pub enum Dispersion {
     Relative
     }
 
-/* Technical stuff - aliases of some types */
+/** **Technical part** - cycle action. */
 #[derive(Clone)]
 pub struct Action (
     pub usize,
@@ -64,6 +65,7 @@ pub struct Action (
     pub u32
     );
 
+/** **Technical part** - trait implementation for input parsing. */
 impl FromStr for Action {
     type Err = Error;
 
@@ -80,7 +82,7 @@ impl FromStr for Action {
         }
     }
 
-/* Technical stuff - data holder needed for constructing world's grid */
+/** **Technical part** - data holder needed for constructing world's grid. */
 #[derive(Clone, Copy)]
 pub enum PointInfo {
     Food(char, i16, i16, u32),
@@ -88,6 +90,7 @@ pub enum PointInfo {
     }
 
 impl PointInfo {
+    /** `id` getter. */
     #[inline]
     pub const fn get_id(&self) -> char {
         match self {
@@ -95,7 +98,8 @@ impl PointInfo {
             &Self::Food(id, ..) => id
             }
         }
-
+    
+    /** `position` tuple getter. */
     #[inline]
     pub const fn get_position(&self) -> (i16, i16) {
         match self {
@@ -104,6 +108,7 @@ impl PointInfo {
             }
         }
 
+    /** `food` checker. */
     #[inline]
     pub const fn has_food(&self) -> bool {
         match self {
@@ -113,6 +118,7 @@ impl PointInfo {
             }
         }
 
+    /** `food` getter. */
     #[inline]
     pub const fn get_food(&self) -> u32 {
         match self {
@@ -122,6 +128,7 @@ impl PointInfo {
         }
     }
 
+/** **Technical part** - trait implementation for input parsing. */
 impl FromStr for PointInfo {
     type Err = Error;
 
@@ -144,23 +151,36 @@ impl FromStr for PointInfo {
         }
     }
 
-/* Technical stuff - structure for holding, and printing simulation's configuration */
+/** **Technical part** - structure for holding, and printing simulation's configuration. */
 pub struct Config {
+    /** Number of cycles. */
     pub cycles: usize,
+    /** Number of ants. */
     pub ants: usize,
+    /** Pheromone strengths. */
     pub pheromone: f64,
+    /** Number of decision points. */
     pub decision: usize,
+    /** Consumption rate. */
     pub rate: u32,
+    /** Whether ants return, after reaching food. */
     pub returns: bool,
+    /** Point selection method. */
     pub select: Selection,
+    /** Point prefrence calculation method. */
     pub preference: Preference,
+    /** Distance calculation metric. */
     pub metric: Metric,
+    /** Possible dispersion behaviour. */
     pub dispersion: Option<Dispersion>,
+    /** Possible dispersion coefficient. */
     pub factor: f64,
+    /** Possible random number generator seed. */
     pub seed: Option<u64>
     }
 
 impl Config {
+    /** Show operation for the settings. */
     pub fn show(&self) {
         println!(
 "o> -------- SETTINGS -------- <o
@@ -186,17 +206,23 @@ o> -------------------------- <o",
         }
     }
 
-/* Technical stuff - structure for holding statistics of simulation's run, and operations needed for saving this data */
+/** **Technical part** - structure for holding statistics of simulation's run, and operations needed for saving this data. */
 #[derive(Default, Deserialize, Serialize)]
 pub struct Stats {
+    /** Whether all ants have finished their routes. */
     pub completed: bool,
+    /** Final pheromone strengths for points in declaration order. */
     pub pheromone_strengths: Vec<f64>,
+    /** Ant's average route length. */
     pub average_route_len: f64,
+    /** Number of satiated ants for each cycle. */
     pub ants_per_phase: Vec<usize>,
+    /** Average number of routes per ant. */
     pub average_returns: f64
     }
 
 impl Stats {
+    /** `pheromone_per_route` getter. */
     pub fn get_pheromone_per_route(&self) -> Vec<f64> {
         self.pheromone_strengths.iter()
             .map(|phero| phero / self.average_returns)
