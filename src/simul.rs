@@ -19,10 +19,8 @@ use {
             Read,
             Write
             },
-        path::Path,
-        rc::Rc
+        path::Path
         },
-    core::cell::RefCell,
     crate::{
         anthill::AntHill,
         args::Args,
@@ -55,7 +53,7 @@ pub struct Simulator {
     /** The colony of ants. */
     ant_hill: AntHill,
     /** World space object. */
-    world_cell: Rc<RefCell<World>>,
+    world: World,
     /** Statistics for each simulation run. */
     stats: Vec<Stats>,
     /** Operation for showing the statistics. */
@@ -77,9 +75,9 @@ impl Simulator {
             .. } = args;
 
         /* Preproces arguments */
-        let (factor, grid) = (
-            factor.unwrap_or(bias::UNKOWN),
-            grid.unwrap_or(Vec::from(GRID))
+        let (grid, factor) = (
+            grid.unwrap_or(Vec::from(GRID)),
+            factor.unwrap_or(bias::UNKOWN)
             );
         let actions: HashMap<_, Vec<_>> = actions.into_iter()
             .flatten()
@@ -90,10 +88,11 @@ impl Simulator {
 
                 map
                 });
+        let num_of_points = grid.len();
+        let anthill = &grid[0];
 
         /* Assert some conditions to avoid unnecessary errors */ {
             /* Prepare variables */
-            let num_of_points = grid.len();
             let (point_ids, point_pos): (HashSet<_>, HashSet<_>) = grid.iter()
                 .map(|&Point { id, x, y, .. }| (id, (x, y)))
                 .unzip();
@@ -123,10 +122,8 @@ impl Simulator {
                 _ => false
                 };
             let actions_correct = point_ids.is_superset(&actions_ids);
-            let anthill_has_no_food = {
-                let anthill = &grid[0];
-                anthill.food == 0 && ! actions_ids.contains(&anthill.id)
-                };
+            let anthill_has_no_food = anthill.food == 0 &&
+                ! actions_ids.contains(&anthill.id);
             let resonable_batch_size = limits::BATCH_RANGE.contains(&batch);
 
             /* Assert! */
@@ -165,13 +162,18 @@ impl Simulator {
             dispersion, factor,
             seed
             };
-        
-        /* Create World, and contain it inside smart pointer */
-        let world_cell = World::new(grid, &config)
-            .into();
 
         /* Create Anthill object */
-        let ant_hill = AntHill::new(&world_cell, ants);
+        let ant_hill = AntHill::new(
+            ants,
+            anthill.id,
+            config.rate != 0,
+            config.returns,
+            num_of_points
+            );
+        
+        /* Create World, and contain it inside smart pointer */
+        let world = World::new(grid, &config);
 
         /* Create simulator */
         Self {
@@ -181,7 +183,7 @@ impl Simulator {
             actions,
             stats: Vec::with_capacity(batch),         
             ant_hill,
-            world_cell,
+            world,
             show_operation: select!(singleton,
                 Self::show_one,
                 Self::show_avg
@@ -200,27 +202,24 @@ impl Simulator {
             if self.logs {
                 println!("o>====== BEGINNING ======<o");
                 self.ant_hill.show();
-                self.world_cell.borrow()
-                    .show();
+                self.world.show();
                 println!("o>=======================<o\n");
                 }
 
             /* Begin the simulation */
             for phase in 0 .. self.config.cycles {
                 /* Make simulation step */
-                self.ant_hill.action();
-
-                let mut world = self.world_cell.borrow_mut();
+                self.ant_hill.action(&mut self.world);
 
                 /* Disperse pheromones, if applicable */
                 if self.config.dispersion.is_some() {
-                    world.disperse_pheromons();
+                    self.world.disperse_pheromons();
                     }
 
                 /* Execute actions, if applicable */
                 if let Some(acts) = self.actions.get(&phase) {
                     for &(id, amount) in acts {
-                        world.set_foodsource(id, amount);
+                        self.world.set_foodsource(id, amount);
                         }
                     }
 
@@ -231,15 +230,14 @@ impl Simulator {
                 if self.logs {
                     println!("o>======  PHASE {:>2} ======<o", phase + 1);
                     self.ant_hill.show();
-                    world.show();
+                    self.world.show();
                     println!("o>=======================<o\n");
                     }
                 }
 
             /* Gather final statistics */
             stats.completed = self.ant_hill.has_all_ants_satiated();
-            stats.pheromone_strengths = self.world_cell.borrow()
-                .get_pheromones_per_point();
+            stats.pheromone_strengths = self.world.get_pheromones_per_point();
             stats.average_route_len = self.ant_hill.get_average_route_length();
             stats.average_returns = self.ant_hill.get_average_routes_count();
 
@@ -248,8 +246,7 @@ impl Simulator {
 
             /* Reset */
             self.ant_hill.reset();
-            self.world_cell.borrow_mut()
-                .reset();
+            self.world.reset();
             }
         }
     
@@ -307,8 +304,7 @@ o> ------------------------------ <o",
 
     /** `average_stats` getter */
     fn get_average_stats(&self) -> (usize, Vec<f64>, f64, Vec<f64>, f64, Vec<f64>) {
-        let number_of_points = self.world_cell.borrow()
-            .get_number_of_points();
+        let number_of_points = self.world.get_number_of_points();
         let batch = self.batch_size as f64;
 
         /* Set empty containers */
@@ -352,8 +348,7 @@ o> ------------------------------ <o",
     /** Show the simulation's summary. */
     pub fn show(&self) {
         /* Show world grid */
-        self.world_cell.borrow()
-            .show_grid();
+        self.world.show_grid();
 
         /* Show simulation's settings */
         self.config.show();

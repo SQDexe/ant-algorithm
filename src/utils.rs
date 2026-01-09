@@ -7,6 +7,44 @@ use {
     core::str::FromStr
     };
 
+/** `Ant` structure, basic logical unit. */
+pub struct Ant {
+    /** Check, whether the ant found food. */
+    pub satiated: bool,
+    /** Ant's current route. */
+    pub route: String,
+    /** Number of routes the ant went through. */
+    pub routes_counter: u8
+    }
+
+impl Ant {
+    /** Constructor. */
+    pub fn new(anthill_id: char, max_length: usize) -> Self {
+        let mut route = String::with_capacity(max_length);
+        route.push(anthill_id);
+
+        /* Create ant */
+        Self {
+            satiated: false,
+            route,
+            routes_counter: 0
+            }
+        }
+
+    /** Reset the postion, route, and unmark the ant. */
+    pub fn return_to(&mut self, destination: char) {
+        self.satiated = false;
+        self.route.clear();
+        self.route.push(destination);
+        }
+
+    /** Reset the position, and the counter. */
+    pub fn reset(&mut self, destination: char) {
+        self.return_to(destination);
+        self.routes_counter = 0;
+        }
+    }
+
 /** `Point` structure, for holding basic point data. */
 #[derive(Clone, Default)]
 pub struct Point {

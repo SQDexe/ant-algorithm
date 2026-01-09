@@ -7,13 +7,9 @@ use {
     sqds_tools::select,
     std::{
         collections::HashSet,
-        process::exit,
-        rc::Rc
+        process::exit
         },
-    core::{
-        cell::RefCell,
-        iter::repeat_with
-        },
+    core::iter::repeat_with,
     crate::{
         consts::{
             bias,
@@ -45,8 +41,6 @@ pub struct World {
     points: ArrayVec<[Point; POINTS_RANGE.end]>,
     /** Auxils container. */
     auxils: ArrayVec<[Auxil; POINTS_RANGE.end]>,
-    /** Anthill ID - the starting point. */
-    anthill_id: char,
     /** Current points holding any food. */
     foodsource_ids: HashSet<char>,
     /** Initial points holding any food. */
@@ -57,8 +51,6 @@ pub struct World {
     pheromone: f64,
     /** Amount of food ants cosume. */
     consume_rate: u32,
-    /** Whether ants return after finding food. */
-    ants_return: bool,
     /** Function for acquiring new index. */
     get_index_operation: fn (&Self) -> usize,
     /** Function for calculating point prefrence. */
@@ -74,9 +66,6 @@ pub struct World {
 impl World {
     /** Constructor. */
     pub fn new(point_list: Vec<Point>, config: &Config) -> Self {
-        /* Get anthill ID */
-        let anthill_id = point_list[0].id;
-
         /* Set initial, and existing foodsources */
         let (initial_foodsources, foodsource_ids): (ArrayVec<_>, HashSet<_>) = point_list.iter()
             .filter_map(|point|
@@ -99,12 +88,10 @@ impl World {
             num_of_points,
             points,
             auxils,
-            anthill_id,
             foodsource_ids,
             initial_foodsources,
             number_of_decision_points: config.decision,
             pheromone: config.pheromone,
-            ants_return: config.returns,
             consume_rate: config.rate,
             get_index_operation: match config.select {
                 Selection::Random => World::select_randomly,
@@ -178,8 +165,9 @@ impl World {
 
     /** Reset auxils in sync with points - the ratios are overwritten each time. */
     fn reset_auxils(&mut self) {
-        for (auxil, point) in self.auxils.iter_mut()
-        .zip(self.points.iter()) {
+        let iter = self.auxils.iter_mut()
+            .zip(self.points.iter());
+        for (auxil, point) in iter {
             auxil.id = point.id
             }
         }
@@ -224,9 +212,11 @@ impl World {
             };
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
-        for (auxil, point) in self.auxils.iter_mut()
-        .zip(self.points.iter()) {
-            let viable = ! visited.contains(auxil.id) || self.foodsource_ids.contains(&position_id);
+        let iter = self.auxils.iter_mut()
+            .zip(self.points.iter());
+        for (auxil, point) in iter {
+            let viable = ! visited.contains(auxil.id) ||
+                self.foodsource_ids.contains(&position_id);
             auxil.ratio = select!(viable,
                 (self.preference_operation)(point, x, y, self.distance_operation),
                 bias::MINUTE
@@ -249,11 +239,13 @@ impl World {
         }
 
     /** Cover the route with pheromones. */
-    pub fn cover_route(&mut self, visited: &str) {
-        let cleared = visited.replace(self.anthill_id, "");
-
-        for point in self.points.iter_mut()
-        .filter(|point| cleared.contains(point.id)) {
+    pub fn cover_route(&mut self, visited: &str, exclude_id: char) {
+        let iter = self.points.iter_mut()
+            .filter(|point|
+                visited.contains(point.id) &&
+                point.id != exclude_id
+                );
+        for point in iter {
             point.pheromone += self.pheromone
             }
         }
@@ -315,57 +307,39 @@ impl World {
 
     /** Show a table of states of all points. */
     pub fn show(&self) {
+        let tmp: String = self.points.iter()
+            .map(|Point { id, food, pheromone, .. }|
+                format!("| # {id}: {food:>4} - {pheromone}\n")
+                )
+            .collect();
+
         println!(
 "| o>--- world ---<o
-{}| o>-------------<o",
-            self.points.iter()
-                .map(|Point { id, food, pheromone, .. }|
-                    format!("| # {id}: {food:>4} - {pheromone}\n")
-                    )
-                .collect::<String>()
+{tmp}| o>-------------<o"
             );
         }
 
     /** Show a table of coordinates of all points. */
     pub fn show_grid(&self) {
+        let tmp: String = self.points.iter()
+            .map(|Point { id, x, y, .. }|
+                format!("| # {id}: ({x:>3},{y:>3})\n")
+                )
+            .collect();
+
         println!(
 "o> ---- GRID ---- <o
-{}o> -------------- <o",
-            self.points.iter()
-                .map(|Point { id, x, y, .. }|
-                    format!("| # {id}: ({x:>3},{y:>3})\n")
-                    )
-                .collect::<String>()
+{tmp}o> -------------- <o"
             );
         }
-
-    /** `anthill_id` getter. */
-    #[inline]
-    pub const fn get_anthill(&self) -> char
-        { self.anthill_id }
     /** `points`' length getter.` */
     #[inline]
     pub const fn get_number_of_points(&self) -> usize
         { self.num_of_points }
-    /** `consume_rate` checker. */
-    #[inline]
-    pub const fn do_ants_consume(&self) -> bool
-        { self.consume_rate != 0 }
-    /** `ants_return` checker. */
-    #[inline]
-    pub const fn do_ants_return(&self) -> bool
-        { self.ants_return }
     /** `pheromones_per_point` getter. */
     pub fn get_pheromones_per_point(&self) -> Vec<f64> {
         self.points.iter()
             .map(|point| point.pheromone)
             .collect()
-        }
-    }
-
-/* **Technical part** - trait implementation for converting from `World`, a shorthand. */
-impl From<World> for Rc<RefCell<World>> {
-    fn from(value: World) -> Self {
-        Rc::new(RefCell::new(value))
         }
     }

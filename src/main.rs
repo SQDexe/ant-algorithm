@@ -1,5 +1,4 @@
 /* Logical modules */
-mod ant;
 mod anthill;
 mod world;
 mod utils;
