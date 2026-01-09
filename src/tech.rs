@@ -9,6 +9,7 @@ use {
         Deserialize,
         Serialize
         },
+    tinyvec::ArrayVec,
     sqds_tools::ShowOption,
     core::str::FromStr
     };
@@ -70,84 +71,16 @@ impl FromStr for Action {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Box<[_]> = s.split(',').collect();
-        match parts[..] {
-            [cycle, id, food] => Ok(Action(
+        let parts: ArrayVec<[_; 3]> = s.splitn(3, ',').collect();
+        if let [cycle, id, food] = parts[..] {
+            return Ok(Self(
                 cycle.parse()?,
                 id.parse()?,
                 food.parse()?
-                )),
-            _ => Err(anyhow!("Action parsing failed"))
+                ));
             }
-        }
-    }
 
-/** **Technical part** - data holder needed for constructing world's grid. */
-#[derive(Clone, Copy)]
-pub enum PointInfo {
-    Food(char, i16, i16, u32),
-    Empty(char, i16, i16)
-    }
-
-impl PointInfo {
-    /** `id` getter. */
-    #[inline]
-    pub const fn get_id(&self) -> char {
-        match self {
-            &Self::Empty(id, ..) => id,
-            &Self::Food(id, ..) => id
-            }
-        }
-    
-    /** `position` tuple getter. */
-    #[inline]
-    pub const fn get_position(&self) -> (i16, i16) {
-        match self {
-            &Self::Empty(_, x, y) => (x, y),
-            &Self::Food(_, x, y, _) => (x, y)
-            }
-        }
-
-    /** `food` checker. */
-    #[inline]
-    pub const fn has_food(&self) -> bool {
-        match self {
-            Self::Empty(..) => false,
-            Self::Food(.. , 0) => false,
-            _ => true
-            }
-        }
-
-    /** `food` getter. */
-    #[inline]
-    pub const fn get_food(&self) -> u32 {
-        match self {
-            &Self::Food(.. , amount) => amount,
-            _ => 0   
-            }
-        }
-    }
-
-/** **Technical part** - trait implementation for input parsing. */
-impl FromStr for PointInfo {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Box<[_]> = s.split(',').collect();
-        match parts[..] {
-            [id, x, y] => Ok(PointInfo::Empty(
-                id.parse()?,
-                x.parse()?,
-                y.parse()?
-                )),
-            [id, x, y, food] => Ok(PointInfo::Food(
-                id.parse()?,
-                x.parse()?,
-                y.parse()?,
-                food.parse()?
-                )),
-            _ => Err(anyhow!("PointInfo parsing failed"))
-            }
+        Err(anyhow!("Action parsing failed"))
         }
     }
 

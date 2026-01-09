@@ -1,14 +1,14 @@
-use crate::tech::PointInfo;
+use crate::utils::Point;
 
 /** Default world grid. */
-pub const GRID: [PointInfo; 7] = [
-    PointInfo::Empty('a', 6, 1),
-    PointInfo::Empty('b', 13, 1),
-    PointInfo::Empty('c', 4, 3),
-    PointInfo::Empty('d', 4, 5),
-    PointInfo::Empty('e', 8, 5),
-    PointInfo::Empty('f', 6, 8),
-    PointInfo::Food('g', 10, 8, 15)
+pub const GRID: [Point; 7] = [
+    Point::new('a',  6, 1,  0),
+    Point::new('b', 13, 1,  0),
+    Point::new('c',  4, 3,  0),
+    Point::new('d',  4, 5,  0),
+    Point::new('e',  8, 5,  0),
+    Point::new('f',  6, 8,  0),
+    Point::new('g', 10, 8, 15)
     ];
 
 /** Default simulation settings. */
@@ -68,7 +68,7 @@ pub mod limits {
     /** Allowed range for point coordinates. */
     pub const GRID_RANGE: RangeInclusive<i16> = -99 ..= 99;
     /** Allowed range for number of points. */
-    pub const POINTS_RANGE: Range<usize> = 2 .. 1000;
+    pub const POINTS_RANGE: Range<usize> = 2 .. 100;
     /** Allowed range for number of ants. */
     pub const ANTS_RANGE: RangeInclusive<usize> = 1 ..= 0xffffff;
     /** Allowed range for number of cycles. */

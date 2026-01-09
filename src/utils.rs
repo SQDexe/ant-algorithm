@@ -1,6 +1,14 @@
-use crate::tech::PointInfo;
+use {
+    anyhow::{
+        anyhow,
+        Error
+        },
+    tinyvec::ArrayVec,
+    core::str::FromStr
+    };
 
 /** `Point` structure, for holding basic point data. */
+#[derive(Clone, Default)]
 pub struct Point {
     /** Unique point ID. */
     pub id: char,
@@ -27,6 +35,11 @@ impl Point {
             }
         }
 
+    /** `food` checker. */
+    pub const fn has_food(&self) -> bool {
+        self.food != 0
+        }
+
     /** Reset point's values. */
     pub const fn reset(&mut self) {
         self.food = self.initial_food;
@@ -34,19 +47,32 @@ impl Point {
         }
     }
 
-/** **Technical part** - trait implementation for converting from `PointInfo`. */
-impl From<PointInfo> for Point {
-    fn from(value: PointInfo) -> Self {
-        match value {
-            PointInfo::Empty(id, x, y) =>
-                Self::new(id, x, y, 0),
-            PointInfo::Food(id, x, y, food) =>
-                Self::new(id, x, y, food)    
+/** **Technical part** - trait implementation for input parsing. */
+impl FromStr for Point {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: ArrayVec<[_; 4]> = s.splitn(4, ',').collect();
+        match parts[..] {
+            [id, x, y] => Ok(Self::new(
+                id.parse()?,
+                x.parse()?,
+                y.parse()?,
+                0
+                )),
+            [id, x, y, food] => Ok(Self::new(
+                id.parse()?,
+                x.parse()?,
+                y.parse()?,
+                food.parse()?
+                )),
+            _ => Err(anyhow!("Point parsing failed"))
             }
         }
     }
 
 /** Auxil structure, for calculation puropses. */
+#[derive(Default)]
 pub struct Auxil {
     /** ID of refrenced point. */
     pub id: char,

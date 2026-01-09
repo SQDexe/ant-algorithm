@@ -8,9 +8,9 @@ use {
             Metric,
             Preference,
             Selection,
-            Action,
-            PointInfo
-            }
+            Action
+            },
+        utils::Point
         }
     };
 
@@ -63,8 +63,8 @@ pub struct Args {
     /// the first point is automatically chosen as anthill,  
     /// format 'id,x,y[,food]'  
     /// [default: a,6,1;b,13,1;c,4,3;d,4,5;e,8,5;f,6,8;g,10,8,15]  
-    #[clap(short = 'G', long, num_args(2 ..= 100), value_delimiter = ';', verbatim_doc_comment)]
-    pub grid: Option<Vec<PointInfo>>,
+    #[clap(short = 'G', long, value_delimiter = ';', verbatim_doc_comment)]
+    pub grid: Option<Vec<Point>>,
     /// Sets food at existing points during runtime,  
     /// format 'cycle,id,amount'  
     #[clap(short = 'A', long, value_delimiter = ';', verbatim_doc_comment)]

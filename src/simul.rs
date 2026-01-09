@@ -37,6 +37,7 @@ use {
             Dispersion,
             Stats
             },
+        utils::Point,
         world::World
         }
     };
@@ -94,7 +95,7 @@ impl Simulator {
             /* Prepare variables */
             let num_of_points = grid.len();
             let (point_ids, point_pos): (HashSet<_>, HashSet<_>) = grid.iter()
-                .map(|point| (point.get_id(), point.get_position()))
+                .map(|&Point { id, x, y, .. }| (id, (x, y)))
                 .unzip();
             let actions_ids = actions.values()
                 .flatten()
@@ -124,7 +125,7 @@ impl Simulator {
             let actions_correct = point_ids.is_superset(&actions_ids);
             let anthill_has_no_food = {
                 let anthill = &grid[0];
-                ! (anthill.has_food() || actions_ids.contains(&anthill.get_id()))
+                anthill.food == 0 && ! actions_ids.contains(&anthill.id)
                 };
             let resonable_batch_size = limits::BATCH_RANGE.contains(&batch);
 

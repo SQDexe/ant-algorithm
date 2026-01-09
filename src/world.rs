@@ -10,7 +10,10 @@ use {
         process::exit,
         rc::Rc
         },
-    core::cell::RefCell,
+    core::{
+        cell::RefCell,
+        iter::repeat_with
+        },
     crate::{
         consts::{
             bias,
@@ -19,7 +22,6 @@ use {
         tech::{
             Config,
             DistanceFunction,
-            PointInfo,
             Dispersion,
             Metric,
             Preference,
@@ -37,16 +39,18 @@ use {
 
 /** `World` structure, for handling most of logic operations, and managing the grid. */
 pub struct World {
+    /** Number of points of the grid. */
+    num_of_points: usize,
     /** Points container. */
-    points: Box<[Point]>,
+    points: ArrayVec<[Point; POINTS_RANGE.end]>,
     /** Auxils container. */
-    auxils: Box<[Auxil]>,
+    auxils: ArrayVec<[Auxil; POINTS_RANGE.end]>,
     /** Anthill ID - the starting point. */
     anthill_id: char,
     /** Current points holding any food. */
     foodsource_ids: HashSet<char>,
     /** Initial points holding any food. */
-    initial_foodsources: Box<[char]>,
+    initial_foodsources: ArrayVec<[char; POINTS_RANGE.end]>,
     /** Number of decision points. */
     number_of_decision_points: usize,
     /** Amount of pheromones laid out by ants. */
@@ -69,38 +73,32 @@ pub struct World {
 
 impl World {
     /** Constructor. */
-    pub fn new(point_list: Vec<PointInfo>, config: &Config) -> Self {
-        /* Unsafe note - unwrap is safe, because the route will never be empty, and the first point is always the anthill */
-        let anthill_id = unsafe {
-            point_list.first()
-                .unwrap_unchecked()
-                .get_id()
-            };
+    pub fn new(point_list: Vec<Point>, config: &Config) -> Self {
+        /* Get anthill ID */
+        let anthill_id = point_list[0].id;
 
-        /* Set initial foodsources */
-        let initial_foodsources: Box<[_]> = point_list.iter()
-            .filter_map(|point_info|
-                point_info.has_food()
-                    .then_some(point_info.get_id())
+        /* Set initial, and existing foodsources */
+        let (initial_foodsources, foodsource_ids): (ArrayVec<_>, HashSet<_>) = point_list.iter()
+            .filter_map(|point|
+                point.has_food()
+                    .then_some((point.id, point.id))
                 )
-            .collect();
-
-        /* Set existing foodsources */
-        let mut foodsource_ids = HashSet::with_capacity(initial_foodsources.len());
-        foodsource_ids.extend(initial_foodsources.iter());
-
-        /* Crate points, and auxils. */
-        let (points, auxils): (Vec<_>, Vec<_>) = point_list.into_iter()
-            .map(|point_info| (
-                Point::from(point_info),
-                Auxil::new('\0', bias::UNKOWN)
-                ))
             .unzip();
+
+        /* Convert the points list, and get length. */
+        let points = ArrayVec::from_iter(point_list);
+        let num_of_points = points.len();
+
+        /* Crate auxils list. */
+        let auxils = repeat_with(|| Auxil::new('\0', bias::UNKOWN))
+            .take(num_of_points)
+            .collect();
 
         /* Crate world */
         Self {
-            points: points.into_boxed_slice(),
-            auxils: auxils.into_boxed_slice(),
+            num_of_points,
+            points,
+            auxils,
             anthill_id,
             foodsource_ids,
             initial_foodsources,
@@ -151,7 +149,7 @@ impl World {
         let wheel: ArrayVec<[f64; POINTS_RANGE.end]> = {
             let iter = self.auxils.iter()
                 .take(self.number_of_decision_points)
-                .map(|Auxil { ratio, ..}| ratio);
+                .map(|auxil| auxil.ratio);
 
             /* Sum ratios within range */
             let sum: f64 = iter.clone()
@@ -348,7 +346,7 @@ impl World {
     /** `points`' length getter.` */
     #[inline]
     pub const fn get_number_of_points(&self) -> usize
-        { self.points.len() }
+        { self.num_of_points }
     /** `consume_rate` checker. */
     #[inline]
     pub const fn do_ants_consume(&self) -> bool
