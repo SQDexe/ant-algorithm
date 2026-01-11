@@ -6,10 +6,7 @@ use {
     tinyvec::ArrayVec,
     sqds_tools::select,
     std::{
-        collections::{
-            HashSet,
-            HashMap
-            },
+        collections::{ HashSet, HashMap },
         process::exit
         },
     core::iter::repeat_with,
@@ -18,21 +15,8 @@ use {
             bias,
             limits::POINTS_RANGE
             },
-        tech::{
-            Config,
-            DistanceFunction,
-            Dispersion,
-            Metric,
-            Preference,
-            Selection
-            },
-        utils::{
-            disperse,
-            distance,
-            preference,
-            Auxil,
-            Point
-            }
+        tech::*,
+        utils::*
         }
     };
 

@@ -2,14 +2,8 @@ use {
     clap::Parser,
     std::path::PathBuf,
     crate::{
-        consts::default,
-        tech::{
-            Dispersion,
-            Metric,
-            Preference,
-            Selection,
-            Action
-            },
+        consts::default::*,
+        tech::*,
         utils::Point
         }
     };
@@ -19,33 +13,33 @@ use {
 #[command(author, version, about)]
 pub struct Args {
     /// Sets number of cycles  
-    #[clap(short, long, default_value_t = default::NUM_OF_CYCLES)]
+    #[clap(short, long, default_value_t = NUM_OF_CYCLES)]
     pub cycles: usize,
     /// Sets number of ants  
-    #[clap(short, long, default_value_t = default::NUM_OF_ANTS)]
+    #[clap(short, long, default_value_t = NUM_OF_ANTS)]
     pub ants: usize,
     /// Sets the strength of pheromones  
-    #[clap(short, long, default_value_t = default::PHERO_STRENGTH)]
+    #[clap(short, long, default_value_t = PHERO_STRENGTH)]
     pub pheromone: f64,
     /// Sets the number of decision points  
-    #[clap(short, long, default_value_t = default::NUM_OF_DECISION_POINTS)]
+    #[clap(short, long, default_value_t = NUM_OF_DECISION_POINTS)]
     pub decision: usize,
 
     /// Sets whether, and how much food is consumed  
-    #[clap(short, long, default_value_t = default::CONSUME_RATE)]
+    #[clap(short, long, default_value_t = CONSUME_RATE)]
     pub rate: u32,
     /// Sets whether ants return to the anthill  
-    #[clap(short = 'R', long, action, default_value_t = default::RETURN_BEHAVIOUR)]
+    #[clap(short = 'R', long, action, default_value_t = RETURN_BEHAVIOUR)]
     pub returns: bool,
 
     /// Sets how points are selected  
-    #[clap(short = 'S', long, value_enum, default_value_t = default::SELECT_METHOD)]
+    #[clap(short = 'S', long, value_enum, default_value_t = SELECT_METHOD)]
     pub select: Selection,
     /// Sets how the point preference is calculated  
-    #[clap(short = 'P', long, value_enum, default_value_t = default::PREFERENCE_METHOD)]
+    #[clap(short = 'P', long, value_enum, default_value_t = PREFERENCE_METHOD)]
     pub preference: Preference,
     /// Sets how the distance between points is calculated  
-    #[clap(short = 'M', long, value_enum, default_value_t = default::METRIC)]
+    #[clap(short = 'M', long, value_enum, default_value_t = METRIC)]
     pub metric: Metric,
 
     /// Sets the dispersion mode  
@@ -71,16 +65,16 @@ pub struct Args {
     pub actions: Option<Vec<Action>>,
 
     /// Run program in quite mode  
-    #[clap(short, long, action, default_value_t = default::QUIET)]
+    #[clap(short, long, action, default_value_t = QUIET)]
     pub quiet: bool,
     /// Run program with a seed
     #[clap(short, long)]
     pub seed: Option<u64>,
     /// Mesure how long did the simulation execute 
-    #[clap(short, long, action, default_value_t = default::TIMING)]
+    #[clap(short, long, action, default_value_t = TIMING)]
     pub timing: bool,
     /// Sets how many times to run the simulation  
-    #[clap(short, long, default_value_t = default::BATCH_SIZE)]
+    #[clap(short, long, default_value_t = BATCH_SIZE)]
     pub batch: usize,
     /// A file to write statistics to in JSON format,  
     /// will create, or append/truncate existing file,  

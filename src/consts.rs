@@ -1,24 +1,20 @@
-use crate::utils::Point;
-
-/** Default world grid. */
-pub const GRID: [Point; 7] = [
-    Point::new('a',  6, 1,  0),
-    Point::new('b', 13, 1,  0),
-    Point::new('c',  4, 3,  0),
-    Point::new('d',  4, 5,  0),
-    Point::new('e',  8, 5,  0),
-    Point::new('f',  6, 8,  0),
-    Point::new('g', 10, 8, 15)
-    ];
-
 /** Default simulation settings. */
 pub mod default {
-    use crate::tech::{
-        Preference,
-        Selection,
-        Metric
+    use crate::{
+        tech::*,
+        utils::Point
         };
 
+    /** Default world grid. */
+    pub const GRID: [Point; 7] = [
+        Point::new('a',  6, 1,  0),
+        Point::new('b', 13, 1,  0),
+        Point::new('c',  4, 3,  0),
+        Point::new('d',  4, 5,  0),
+        Point::new('e',  8, 5,  0),
+        Point::new('f',  6, 8,  0),
+        Point::new('g', 10, 8, 15)
+        ];
     /** Default number of cycles. */
     pub const NUM_OF_CYCLES: usize = 8;
     /** Default number of ants. */

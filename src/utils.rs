@@ -1,8 +1,5 @@
 use {
-    anyhow::{
-        anyhow,
-        Error
-        },
+    anyhow::{ anyhow, Error },
     tinyvec::ArrayVec,
     core::str::FromStr
     };

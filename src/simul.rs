@@ -10,15 +10,9 @@ use {
         ShowSlice
         },
     std::{
-        collections::{
-            HashMap,
-            HashSet
-            },
+        collections::{ HashMap, HashSet },
         fs::File,
-        io::{
-            Read,
-            Write
-            },
+        io::{ Read, Write },
         path::Path
         },
     crate::{
@@ -26,15 +20,10 @@ use {
         args::Args,
         consts::{
             bias,
-            limits,
-            GRID
+            limits::*,
+            default::GRID
             },
-        tech::{
-            Action,
-            Config,
-            Dispersion,
-            Stats
-            },
+        tech::*,
         utils::Point,
         world::World
         }
@@ -102,29 +91,29 @@ impl Simulator {
                 .collect();
 
             /* Prepare assertion variables */
-            let resonable_num_of_points = limits::POINTS_RANGE.contains(&num_of_points);
+            let resonable_num_of_points = POINTS_RANGE.contains(&num_of_points);
             let points_have_unique_ids = point_ids.len() == num_of_points;
             let points_have_unique_postions = point_pos.len() == num_of_points;
             let points_inside_gird = point_pos.iter()
                 .all(|(x, y)|
-                    limits::GRID_RANGE.contains(x) &&
-                    limits::GRID_RANGE.contains(y)
+                    GRID_RANGE.contains(x) &&
+                    GRID_RANGE.contains(y)
                     );
             let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision);
-            let resonable_num_of_ants = limits::ANTS_RANGE.contains(&ants);
-            let resonable_num_of_cycles = limits::CYCLES_RANGE.contains(&cycles);
-            let positive_nonzero_pheromone_strength = limits::PHERO_RANGE.contains(&pheromone);
+            let resonable_num_of_ants = ANTS_RANGE.contains(&ants);
+            let resonable_num_of_cycles = CYCLES_RANGE.contains(&cycles);
+            let positive_nonzero_pheromone_strength = PHERO_RANGE.contains(&pheromone);
             let unset_or_correct_dispersion_factor = match (dispersion, factor) {
-                (Some(Dispersion::Linear), value) if limits::DISP_LINEAR_RANGE.contains(&value) => true,
-                (Some(Dispersion::Exponential), value) if limits::DISP_EXPONENTIAL_RANGE.contains(&value) => true,
-                (Some(Dispersion::Relative), value) if limits::DISP_RELATIVE_RANGE.contains(&value) => true,
+                (Some(Dispersion::Linear), value) if DISP_LINEAR_RANGE.contains(&value) => true,
+                (Some(Dispersion::Exponential), value) if DISP_EXPONENTIAL_RANGE.contains(&value) => true,
+                (Some(Dispersion::Relative), value) if DISP_RELATIVE_RANGE.contains(&value) => true,
                 (None, value) if value.is_nan() => true,
                 _ => false
                 };
             let actions_correct = point_ids.is_superset(&actions_ids);
             let anthill_has_no_food = anthill.food == 0 &&
                 ! actions_ids.contains(&anthill.id);
-            let resonable_batch_size = limits::BATCH_RANGE.contains(&batch);
+            let resonable_batch_size = BATCH_RANGE.contains(&batch);
 
             /* Assert! */
             batch_assert!(
