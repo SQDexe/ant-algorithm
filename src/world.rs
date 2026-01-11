@@ -178,17 +178,17 @@ impl World {
             }
 
         /* Get current postion's id, and coordinates */
-        let data_tuple = visited.chars()
-            .last()
-            .and_then(|position_id|
-                self.points.iter()
-                    .find(|point| point.id == position_id)
-                    .map(|&Point { x, y, .. }| (position_id, x, y))
-                );
-
-        /* Unsafe note - unwrap is safe, because the route will never be empty, and the current position will always be contained */
-        let (position_id, x, y) = unsafe {
-            data_tuple.unwrap_unchecked()
+        let (current_id, current_x, current_y) = {
+            /* Unsafe note - unwrap is safe, because the route will never be empty */
+            let id = unsafe {
+                visited.chars()
+                    .last()
+                    .unwrap_unchecked()
+                };
+            
+            /* Retrive point data */
+            let point = self.find_point(id);
+            (point.id, point.x, point.y)
             };
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
@@ -196,9 +196,9 @@ impl World {
             .zip(self.points.iter());
         for (auxil, point) in iter {
             let viable = ! visited.contains(auxil.id) ||
-                self.foodsource_ids.contains(&position_id);
+                self.foodsource_ids.contains(&current_id);
             auxil.ratio = select!(viable,
-                (self.preference_operation)(point, x, y, self.distance_operation),
+                (self.preference_operation)(point, current_x, current_y, self.distance_operation),
                 bias::MINUTE
                 )
             };
@@ -217,8 +217,6 @@ impl World {
         /* Return id of new position */
         self.auxils[choice].id
         }
-
-    
 
     /** Cover the route with pheromones. */
     pub fn cover_route(&mut self, visited: &str, exclude: &[char], pheromone: f64) {
