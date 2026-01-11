@@ -164,18 +164,12 @@ impl Simulator {
             };
 
         /* Create Anthill object */
-        let ant_hill = AntHill::new(
-            ants,
-            anthill.id,
-            config.rate != 0,
-            config.returns,
-            num_of_points
-            );
+        let ant_hill = AntHill::new(anthill.id, &config, num_of_points);
         
-        /* Create World, and contain it inside smart pointer */
+        /* Create World object */
         let world = World::new(grid, &config);
 
-        /* Create simulator */
+        /* Create Simulator object */
         Self {
             logs,
             batch_size: batch,

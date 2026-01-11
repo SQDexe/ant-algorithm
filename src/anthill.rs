@@ -1,6 +1,7 @@
 use {
     core::iter::repeat_with,
     crate::{
+        tech::Config,
         utils::Ant,
         world::World
         }
@@ -10,29 +11,42 @@ use {
 pub struct AntHill {
     /** Number of ants in the colony. */
     num_of_ants: usize,
+    /** Container for the ants. */
+    ants: Box<[Ant]>,
     /** Anthill's ID. */
     anthill_id: char,
-    /** Whether ants consume food. */
-    consumption: bool,
+    /** Amount of pheromones laid out by ants. */
+    pheromone: f64,
+    /** Amount of food ants cosume. */
+    consume_rate: u32,
     /** Whether ants return to the colony after finishing their routes. */
-    returning: bool,
-    /** Container for the ants. */
-    ants: Box<[Ant]>
+    do_return: bool
     }
 
 impl AntHill {
     /** Constructor. */
-    pub fn new(num_of_ants: usize, anthill_id: char, consumption: bool, returning: bool, num_of_points: usize) -> Self {
+    pub fn new(anthill_id: char, config: &Config, num_of_points: usize) -> Self {
         let ants = repeat_with(|| Ant::new(anthill_id, num_of_points))
-            .take(num_of_ants)
+            .take(config.ants)
             .collect();
 
         /* Create anthill */
-        Self { num_of_ants, anthill_id, consumption, returning, ants }
+        Self {
+            num_of_ants: config.ants,
+            ants,
+            anthill_id,
+            pheromone: config.pheromone,
+            consume_rate: config.rate,
+            do_return: config.returns
+            }
         }
 
     /** Make all unsatiated ants take action. */
     pub fn action(&mut self, world: &mut World) {
+        /* Precalculate condition */
+        let do_ants_cosume = self.consume_rate != 0;
+
+        /* Iter over unsatiated ants */
         let iter = self.ants.iter_mut()
             .filter(|ant| ! ant.satiated);
         for ant in iter {
@@ -47,15 +61,15 @@ impl AntHill {
             if food_reached {
                 /* Mark ant as satiated, and cover the route */
                 ant.satiated = true;
-                world.cover_route(&ant.route, self.anthill_id);
+                world.cover_route(&ant.route, &[self.anthill_id], self.pheromone);
 
                 /* If ants consume, consume the foodsource */
-                if self.consumption {
-                    world.consume_foodsource(new_position);
+                if do_ants_cosume {
+                    world.consume_foodsource(new_position, self.consume_rate);
                     }
 
                 /* If ants return, reset position, and increment the counter */
-                if self.returning {
+                if self.do_return {
                     ant.return_to(self.anthill_id);
                     ant.routes_counter += 1;
                     }

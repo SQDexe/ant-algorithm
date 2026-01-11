@@ -6,7 +6,10 @@ use {
     tinyvec::ArrayVec,
     sqds_tools::select,
     std::{
-        collections::HashSet,
+        collections::{
+            HashSet,
+            HashMap
+            },
         process::exit
         },
     core::iter::repeat_with,
@@ -44,13 +47,9 @@ pub struct World {
     /** Current points holding any food. */
     foodsource_ids: HashSet<char>,
     /** Initial points holding any food. */
-    initial_foodsources: ArrayVec<[char; POINTS_RANGE.end]>,
+    initial_foodsources: HashMap<char, u32>,
     /** Number of decision points. */
     number_of_decision_points: usize,
-    /** Amount of pheromones laid out by ants. */
-    pheromone: f64,
-    /** Amount of food ants cosume. */
-    consume_rate: u32,
     /** Function for acquiring new index. */
     get_index_operation: fn (&Self) -> usize,
     /** Function for calculating point prefrence. */
@@ -66,11 +65,10 @@ pub struct World {
 impl World {
     /** Constructor. */
     pub fn new(point_list: Vec<Point>, config: &Config) -> Self {
-        /* Set initial, and existing foodsources */
-        let (initial_foodsources, foodsource_ids): (ArrayVec<_>, HashSet<_>) = point_list.iter()
+        let (initial_foodsources, foodsource_ids): (HashMap<_, _>, HashSet<_>) = point_list.iter()
             .filter_map(|point|
                 point.has_food()
-                    .then_some((point.id, point.id))
+                    .then_some(((point.id, point.food), point.id))
                 )
             .unzip();
 
@@ -91,8 +89,6 @@ impl World {
             foodsource_ids,
             initial_foodsources,
             number_of_decision_points: config.decision,
-            pheromone: config.pheromone,
-            consume_rate: config.rate,
             get_index_operation: match config.select {
                 Selection::Random => World::select_randomly,
                 Selection::Roulette => World::select_roulette,
@@ -238,15 +234,17 @@ impl World {
         self.auxils[choice].id
         }
 
+    
+
     /** Cover the route with pheromones. */
-    pub fn cover_route(&mut self, visited: &str, exclude_id: char) {
+    pub fn cover_route(&mut self, visited: &str, exclude: &[char], pheromone: f64) {
         let iter = self.points.iter_mut()
             .filter(|point|
                 visited.contains(point.id) &&
-                point.id != exclude_id
+                ! exclude.contains(&point.id)
                 );
         for point in iter {
-            point.pheromone += self.pheromone
+            point.pheromone += pheromone
             }
         }
 
@@ -255,16 +253,19 @@ impl World {
         self.set_pheromones(self.disperse_operation);
         }
 
+    fn find_point(&mut self, position_id: char) -> &mut Point {
+        /* Unsafe note - unwrap is safe, because the point ids are checked during the setup */
+        unsafe {
+            /* Try finding the point */
+            self.points.iter_mut()
+                .find(|point| point.id == position_id)
+                .unwrap_unchecked()
+            }
+        }
+
     /** Set amount of food at given point. */
     pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
-        /* Try finding the point */
-        let wrapped_point = self.points.iter_mut()
-            .find(|point| point.id == position_id);
-
-        /* Unsafe note - unwrap is safe, because the point ids are checked during the setup */
-        let point = unsafe {
-            wrapped_point.unwrap_unchecked()
-            };
+        let point = self.find_point(position_id);
             
         /* Assign the amount, and add to foodsource list */
         point.food = amount;
@@ -272,19 +273,12 @@ impl World {
         }
 
     /** Decrease food at given point. */
-    pub fn consume_foodsource(&mut self, position_id: char) {
-        /* Try finding the point */
-        let wrapped_point = self.points.iter_mut()
-            .find(|point| point.id == position_id);
-
-        /* Unsafe note - unwrap is safe, because the point ids are checked during the setup */
-        let point = unsafe {
-            wrapped_point.unwrap_unchecked()
-            };
+    pub fn consume_foodsource(&mut self, position_id: char, amount: u32) {
+        let point = self.find_point(position_id);
 
         /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
-        point.food = point.food.saturating_sub(self.consume_rate);
-        if point.food == 0 {
+        point.food = point.food.saturating_sub(amount);
+        if ! point.has_food() {
             self.foodsource_ids.remove(&position_id);
             }
         }
@@ -296,13 +290,19 @@ impl World {
 
     /** Reset points to original state - food, and pheromones. */
     pub fn reset(&mut self) {
-        /* Reset points */
-        self.points.iter_mut()
-            .for_each(Point::reset);
-        
-        /* Reset available foodsources */
+        /* Clear available foodsources */
         self.foodsource_ids.clear();
-        self.foodsource_ids.extend(self.initial_foodsources.iter());
+
+        /* Reset points */
+        for point in self.points.iter_mut() {
+            point.pheromone = 0.0;
+
+            /* Additional reset if point had food initally */
+            if let Some(&initial_value) = self.initial_foodsources.get(&point.id) {
+                point.food = initial_value;
+                self.foodsource_ids.insert(point.id);
+                } 
+            }
         }
 
     /** Show a table of states of all points. */

@@ -57,31 +57,19 @@ pub struct Point {
     /** Point's current amount of pheromones. */
     pub pheromone: f64,
     /** Point's current amount of food. */
-    pub food: u32,
-    /** Point's initial amount of pheromones. */
-    initial_food: u32
+    pub food: u32
     }
 
 impl Point {
     /** Constructor. */
     #[inline]
     pub const fn new(id: char, x: i16, y: i16, food: u32) -> Self {
-        Self {
-            id, x, y, food,
-            pheromone: 0.0,
-            initial_food: food
-            }
+        Self { id, x, y, food, pheromone: 0.0 }
         }
 
     /** `food` checker. */
     pub const fn has_food(&self) -> bool {
         self.food != 0
-        }
-
-    /** Reset point's values. */
-    pub const fn reset(&mut self) {
-        self.food = self.initial_food;
-        self.pheromone = 0.0;
         }
     }
 
