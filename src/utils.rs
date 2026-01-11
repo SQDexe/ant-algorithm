@@ -106,14 +106,6 @@ pub struct Auxil {
     pub ratio: f64
     }
 
-impl Auxil {
-    /** Constructor. */
-    #[inline]
-    pub const fn new(id: char, ratio: f64) -> Self {
-        Self { id, ratio }
-        }
-    }
-
 /** Functions for calulating distance metric. */
 pub mod distance {
     /** **Technical part** - helper function for calculating delta of values. */

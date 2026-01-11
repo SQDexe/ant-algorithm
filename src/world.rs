@@ -77,7 +77,7 @@ impl World {
         let num_of_points = points.len();
 
         /* Crate auxils list. */
-        let auxils = repeat_with(|| Auxil::new('\0', bias::UNKOWN))
+        let auxils = repeat_with(Auxil::default)
             .take(num_of_points)
             .collect();
 
