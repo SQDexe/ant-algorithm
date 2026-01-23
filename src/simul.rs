@@ -29,6 +29,8 @@ use {
         }
     };
 
+
+
 /** `Simulation` structure, for managing the instatiating, asserting correct configuration, simulation running, prinitng, and saving data. */
 pub struct Simulator {
     /** Whether logging should happen. */
@@ -54,14 +56,21 @@ impl Simulator {
     pub fn new(args: Args) -> Self {
         /* Unpack arguments */
         let Args {
-            cycles, ants, pheromone, decision,
+            pheromone,
             rate, returns,
             select, preference, metric,
             dispersion,
-            batch,
             factor, actions, grid,
             seed,
             .. } = args;
+
+        /* Cast arguments to acceptable tpyes */
+        let (cycles, ants, decision, batch) = (
+            args.cycles as usize,
+            args.ants as usize,
+            args.decision as usize,
+            args.batch as usize
+            );
 
         /* Preproces arguments */
         let (grid, factor) = (
@@ -78,7 +87,10 @@ impl Simulator {
                 map
                 });
         let num_of_points = grid.len();
-        let anthill = &grid[0];
+        /* Unsafe note - get is safe, because the points will never be empty */
+        let anthill = unsafe {
+            grid.get_unchecked(0)
+            };
 
         /* Assert some conditions to avoid unnecessary errors */ {
             /* Prepare variables */
@@ -91,7 +103,6 @@ impl Simulator {
                 .collect();
 
             /* Prepare assertion variables */
-            let resonable_num_of_points = POINTS_RANGE.contains(&num_of_points);
             let points_have_unique_ids = point_ids.len() == num_of_points;
             let points_have_unique_postions = point_pos.len() == num_of_points;
             let points_inside_gird = point_pos.iter()
@@ -100,8 +111,6 @@ impl Simulator {
                     GRID_RANGE.contains(y)
                     );
             let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision);
-            let resonable_num_of_ants = ANTS_RANGE.contains(&ants);
-            let resonable_num_of_cycles = CYCLES_RANGE.contains(&cycles);
             let positive_nonzero_pheromone_strength = PHERO_RANGE.contains(&pheromone);
             let unset_or_correct_dispersion_factor = match (dispersion, factor) {
                 (Some(Dispersion::Linear), value) if DISP_LINEAR_RANGE.contains(&value) => true,
@@ -113,22 +122,17 @@ impl Simulator {
             let actions_correct = point_ids.is_superset(&actions_ids);
             let anthill_has_no_food = anthill.food == 0 &&
                 ! actions_ids.contains(&anthill.id);
-            let resonable_batch_size = BATCH_RANGE.contains(&batch);
 
             /* Assert! */
             batch_assert!(
-                resonable_num_of_points,
                 points_have_unique_ids,
                 points_have_unique_postions,
                 points_inside_gird,
                 correct_num_of_decision_points,
-                resonable_num_of_ants,
-                resonable_num_of_cycles,
                 positive_nonzero_pheromone_strength,
                 unset_or_correct_dispersion_factor,
                 actions_correct,
-                anthill_has_no_food,
-                resonable_batch_size
+                anthill_has_no_food
                 );
             }
 
@@ -235,7 +239,10 @@ impl Simulator {
     
     /** Show operation for singular simulation. */
     fn show_one(&self) {
-        let stats = &self.stats[0];
+        /* Unsafe note - get is safe, because the points will never be empty */
+        let stats = unsafe {
+            self.stats.get_unchecked(0)
+            };
 
         println!(
 "o> --------- STATISTICS --------- <o

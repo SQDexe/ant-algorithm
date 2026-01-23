@@ -8,6 +8,8 @@ use {
     core::str::FromStr
     };
 
+
+
 /** **Technical part** - alias for distance calculation function. */
 pub type DistanceFunction = fn (i16, i16, i16, i16) -> f64;
 
@@ -65,8 +67,11 @@ impl FromStr for Action {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        /* Collect split text elements */
         let parts: ArrayVec<[_; 3]> = s.splitn(3, ',').collect();
-        if let [cycle, id, food] = parts[..] {
+
+        /* Try destructing, and parsing */
+        if let [cycle, id, food] = parts.as_slice() {
             return Ok(Self(
                 cycle.parse()?,
                 id.parse()?,
@@ -74,7 +79,8 @@ impl FromStr for Action {
                 ));
             }
 
-        Err(anyhow!("Action parsing failed"))
+        /* Throw error */
+        Err(anyhow!("Incorrect Action format"))
         }
     }
 

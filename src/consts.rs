@@ -16,11 +16,11 @@ pub mod default {
         Point::new('g', 10, 8, 15)
         ];
     /** Default number of cycles. */
-    pub const NUM_OF_CYCLES: usize = 8;
+    pub const NUM_OF_CYCLES: u64 = 8;
     /** Default number of ants. */
-    pub const NUM_OF_ANTS: usize = 15;
+    pub const NUM_OF_ANTS: u64 = 15;
     /** Default number of decisin points. */
-    pub const NUM_OF_DECISION_POINTS: usize = 3;
+    pub const NUM_OF_DECISION_POINTS: u64 = 3;
     /** Default pheromone strength. */
     pub const PHERO_STRENGTH: f64 = 1.0;
     /** Default return behaviour. */
@@ -38,7 +38,7 @@ pub mod default {
     /** Default computation duration logging behaviour. */
     pub const TIMING: bool = false;
     /** Default number of simulation repetitions. */
-    pub const BATCH_SIZE: usize = 1;
+    pub const BATCH_SIZE: u64 = 1;
     }
 
 /** Values for different kinds of calculations. */
@@ -65,18 +65,24 @@ pub mod limits {
     pub const GRID_RANGE: RangeInclusive<i16> = -99 ..= 99;
     /** Allowed range for number of points. */
     pub const POINTS_RANGE: Range<usize> = 2 .. 100;
+    /** Allowed range for number of decision points. */
+    pub const DECSISION_POINTS_RANGE: Range<u64> = 
+        POINTS_RANGE.start as u64 .. POINTS_RANGE.end as u64;
     /** Allowed range for number of ants. */
-    pub const ANTS_RANGE: RangeInclusive<usize> = 1 ..= 0xffffff;
+    pub const ANTS_RANGE: RangeInclusive<u64> = 1 ..= 0xffffff;
     /** Allowed range for number of cycles. */
-    pub const CYCLES_RANGE: Range<usize> = 1 .. 100;
+    pub const CYCLES_RANGE: Range<u64> = 1 .. 100;
     /** Allowed range for pheromone strength. */
     pub const PHERO_RANGE: RangeFrom<f64> = 0.0 ..;
     /** Allowed range for simulation repetitions. */
-    pub const BATCH_RANGE: Range<usize> = 1 .. 1000;
+    pub const BATCH_RANGE: Range<u64> = 1 .. 1000;
     /** Allowed range for linear dispersion coefficient. */
     pub const DISP_LINEAR_RANGE: RangeFrom<f64> = 0.0 ..;
     /** Allowed range for exponential dispersion coefficient. */
     pub const DISP_EXPONENTIAL_RANGE: RangeFrom<f64> = 1.0 ..;
     /** Allowed range for relative dispersion coefficient. */
     pub const DISP_RELATIVE_RANGE: RangeInclusive<f64> = 0.0 ..= 1.0;
+
+    /** Shorthand for maximal number of points. */
+    pub const MAX_POINTS: usize = POINTS_RANGE.end;
     }

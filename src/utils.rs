@@ -4,6 +4,8 @@ use {
     core::str::FromStr
     };
 
+
+
 /** `Ant` structure, basic logical unit. */
 pub struct Ant {
     /** Check, whether the ant found food. */
@@ -43,7 +45,7 @@ impl Ant {
     }
 
 /** `Point` structure, for holding basic point data. */
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Point {
     /** Unique point ID. */
     pub id: char,
@@ -75,22 +77,27 @@ impl FromStr for Point {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        /* Collect split text elements */
         let parts: ArrayVec<[_; 4]> = s.splitn(4, ',').collect();
-        match parts[..] {
-            [id, x, y] => Ok(Self::new(
-                id.parse()?,
-                x.parse()?,
-                y.parse()?,
-                0
-                )),
-            [id, x, y, food] => Ok(Self::new(
-                id.parse()?,
-                x.parse()?,
-                y.parse()?,
-                food.parse()?
-                )),
-            _ => Err(anyhow!("Point parsing failed"))
-            }
+
+        /* Try destructing, otherwise throw error */
+        let Some([id, x, y]) = parts.get(.. 3) else {
+            return Err(anyhow!("Incorrect Point format"));
+            };
+
+        /* Try getting last part */
+        let food = parts.get(3)
+            .map(|e| e.parse())
+            .transpose()?
+            .unwrap_or(0);
+
+        /* Try parsing, and ouptut */
+        Ok(Self::new(
+            id.parse()?,
+            x.parse()?,
+            y.parse()?,
+            food
+            ))
         }
     }
 

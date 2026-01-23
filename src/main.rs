@@ -9,6 +9,7 @@ mod consts;
 mod simul;
 mod tech;
 
+
 use {
     clap::Parser,
     fastrand::seed,
@@ -18,6 +19,8 @@ use {
         simul::Simulator
         }
     };
+
+
 
 /** Entry point of the program. */
 fn main() {    

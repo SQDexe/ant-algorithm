@@ -7,6 +7,8 @@ use {
         }
     };
 
+
+
 /** `Anthill` strucutre, for handling `Ant`'s operations. */
 pub struct AntHill {
     /** Number of ants in the colony. */
