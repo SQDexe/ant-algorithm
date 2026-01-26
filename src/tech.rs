@@ -71,16 +71,16 @@ impl FromStr for Action {
         let parts: ArrayVec<[_; 3]> = s.splitn(3, ',').collect();
 
         /* Try destructing, and parsing */
-        if let [cycle, id, food] = parts.as_slice() {
-            return Ok(Self(
-                cycle.parse()?,
-                id.parse()?,
-                food.parse()?
-                ));
-            }
+        let [cycle, id, food] = parts.as_slice() else {
+            return Err(anyhow!("Incorrect Action format"));
+            };
 
-        /* Throw error */
-        Err(anyhow!("Incorrect Action format"))
+        /* Ouput */
+        Ok(Self(
+            cycle.parse()?,
+            id.parse()?,
+            food.parse()?
+            ))
         }
     }
 
@@ -117,18 +117,18 @@ impl Config {
     pub fn show(&self) {
         println!(
 "o> -------- SETTINGS -------- <o
-|            cycles: {}
-|              ants: {}
-|         pheromone: {}
-|   decision points: {}
-|   consumtion rate: {}
-|           returns: {}
-|         selection: {}
-|       calculation: {}
-|            metric: {}
-|        dispersion: {}
-| dispersion factor: {}
-|              seed: {}
+|          cycles: {}
+|            ants: {}
+|       pheromone: {}
+| decision points: {}
+| consumtion rate: {}
+|         returns: {}
+|       selection: {}
+|     calculation: {}
+|          metric: {}
+|      dispersion: {}
+|          factor: {}
+|            seed: {}
 o> -------------------------- <o",
             self.cycles, self.ants, self.pheromone, self.decision,
             self.rate, self.returns,

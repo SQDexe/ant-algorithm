@@ -1,5 +1,6 @@
 use {
     anyhow::Result as DynResult,
+    rustc_hash::FxBuildHasher,
     serde_json::{
         from_str as from_json,
         to_string_pretty as to_json
@@ -40,7 +41,7 @@ pub struct Simulator {
     /** Simulation's configuration. */
     config: Config,
     /** Amount of food to add on corresponding cycle, and point. */
-    actions: HashMap<usize, Vec<(char, u32)>>,
+    actions: HashMap<usize, Box<[(char, u32)]>, FxBuildHasher>,
     /** The colony of ants. */
     ant_hill: AntHill,
     /** World space object. */
@@ -60,7 +61,6 @@ impl Simulator {
             rate, returns,
             select, preference, metric,
             dispersion,
-            factor, actions, grid,
             seed,
             .. } = args;
 
@@ -73,29 +73,39 @@ impl Simulator {
             );
 
         /* Preproces arguments */
-        let (grid, factor) = (
-            grid.unwrap_or(Vec::from(GRID)),
-            factor.unwrap_or(bias::UNKOWN)
+        let (factor, grid, actions) = (
+            args.factor.unwrap_or(bias::UNKOWN),
+            args.grid.unwrap_or(Vec::from(GRID)),
+            args.actions.unwrap_or_default()
             );
-        let actions: HashMap<_, Vec<_>> = actions.into_iter()
-            .flatten()
-            .fold(HashMap::with_capacity(cycles), |mut map, Action(cycle, id, amount)| {
-                map.entry(cycle)
-                    .or_default()
-                    .push((id, amount));
-
-                map
-                });
         let num_of_points = grid.len();
         /* Unsafe note - get is safe, because the points will never be empty */
         let anthill = unsafe {
             grid.get_unchecked(0)
             };
 
+        /* Build actions map */
+        let actions: HashMap<_, _, _> = {
+            let mut tmp: HashMap<_, Vec<_>, _> = HashMap::with_capacity_and_hasher(cycles, FxBuildHasher);
+
+            /* Fill the temporary map */
+            for Action(cycle, id, amount) in actions {
+                tmp.entry(cycle)
+                    .or_default()
+                    .push((id, amount))
+                }
+
+            /* Rebuild into final file */
+            tmp.into_iter()
+                .map(|(cycle, action)| (cycle, action.into_boxed_slice()))
+                .collect()
+            };
+        
+
         /* Assert some conditions to avoid unnecessary errors */ {
             /* Prepare variables */
-            let (point_ids, point_pos): (HashSet<_>, HashSet<_>) = grid.iter()
-                .map(|&Point { id, x, y, .. }| (id, (x, y)))
+            let (point_ids, point_pos): (HashSet<_, FxBuildHasher>, HashSet<_, FxBuildHasher>) = grid.iter()
+                .map(|Point { id, x, y, .. }| (id, (x, y)))
                 .unzip();
             let actions_ids = actions.values()
                 .flatten()
@@ -105,11 +115,6 @@ impl Simulator {
             /* Prepare assertion variables */
             let points_have_unique_ids = point_ids.len() == num_of_points;
             let points_have_unique_postions = point_pos.len() == num_of_points;
-            let points_inside_gird = point_pos.iter()
-                .all(|(x, y)|
-                    GRID_RANGE.contains(x) &&
-                    GRID_RANGE.contains(y)
-                    );
             let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision);
             let positive_nonzero_pheromone_strength = PHERO_RANGE.contains(&pheromone);
             let unset_or_correct_dispersion_factor = match (dispersion, factor) {
@@ -119,19 +124,18 @@ impl Simulator {
                 (None, value) if value.is_nan() => true,
                 _ => false
                 };
-            let actions_correct = point_ids.is_superset(&actions_ids);
-            let anthill_has_no_food = anthill.food == 0 &&
+            let valid_action_ids = point_ids.is_superset(&actions_ids);
+            let anthill_has_no_food = anthill.is_empty() &&
                 ! actions_ids.contains(&anthill.id);
 
             /* Assert! */
             batch_assert!(
                 points_have_unique_ids,
                 points_have_unique_postions,
-                points_inside_gird,
                 correct_num_of_decision_points,
                 positive_nonzero_pheromone_strength,
                 unset_or_correct_dispersion_factor,
-                actions_correct,
+                valid_action_ids,
                 anthill_has_no_food
                 );
             }
@@ -305,13 +309,13 @@ o> ------------------------------ <o",
         let mut total_pheromone_per_route = vec![0.0; number_of_points];
   
         /* Get total statistics for whole batch */
-        for stat in self.stats.iter() {
+        for stat in &self.stats {
             total.average_route_len += stat.average_route_len;
             total.average_returns += stat.average_returns;
             total_complete_routes += stat.completed as usize;
   
             for (i, (strength, avg_strength)) in stat.pheromone_strengths.iter()
-            .zip(stat.get_pheromone_per_route().iter())
+            .zip(stat.get_pheromone_per_route())
             .enumerate() {
                 total.pheromone_strengths[i] += strength;
                 total_pheromone_per_route[i] += avg_strength;
@@ -325,7 +329,7 @@ o> ------------------------------ <o",
         let avg_route_len = total.average_route_len / batch;
         let avg_returns = total.average_returns / batch;
         let (avg_pheromone_strengths, avg_pheromone_per_route) = total.pheromone_strengths.iter()
-            .zip(total_pheromone_per_route.iter())
+            .zip(&total_pheromone_per_route)
             .map(|(n, m)| (n / batch, m / batch))
             .unzip();
         let avg_ants_per_phase = total.ants_per_phase.iter()

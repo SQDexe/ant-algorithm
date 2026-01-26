@@ -1,7 +1,8 @@
 use {
     anyhow::{ anyhow, Error },
     tinyvec::ArrayVec,
-    core::str::FromStr
+    core::str::FromStr,
+    crate::consts::limits::GRID_RANGE
     };
 
 
@@ -45,7 +46,7 @@ impl Ant {
     }
 
 /** `Point` structure, for holding basic point data. */
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct Point {
     /** Unique point ID. */
     pub id: char,
@@ -67,8 +68,8 @@ impl Point {
         }
 
     /** `food` checker. */
-    pub const fn has_food(&self) -> bool {
-        self.food != 0
+    pub const fn is_empty(&self) -> bool {
+        self.food == 0
         }
     }
 
@@ -81,23 +82,28 @@ impl FromStr for Point {
         let parts: ArrayVec<[_; 4]> = s.splitn(4, ',').collect();
 
         /* Try destructing, otherwise throw error */
-        let Some([id, x, y]) = parts.get(.. 3) else {
-            return Err(anyhow!("Incorrect Point format"));
+        let (str_id, str_x, str_y, food) = match parts.as_slice() {
+            [id, x, y, food] => (id, x, y, food.parse()?),
+            [id, x, y] => (id, x, y, 0),
+            _ => return Err(anyhow!("Incorrect Point data format"))
             };
 
-        /* Try getting last part */
-        let food = parts.get(3)
-            .map(|e| e.parse())
-            .transpose()?
-            .unwrap_or(0);
+        let (id, x, y) = (
+            str_id.parse()?,
+            str_x.parse()?,
+            str_y.parse()?
+            );
+
+        if ! GRID_RANGE.contains(&x) {
+            return Err(anyhow!("Point's x coordiante outside of range"));
+            }
+
+        if ! GRID_RANGE.contains(&y) {
+            return Err(anyhow!("Point's y coordiante outside of range"));
+            }
 
         /* Try parsing, and ouptut */
-        Ok(Self::new(
-            id.parse()?,
-            x.parse()?,
-            y.parse()?,
-            food
-            ))
+        Ok(Self::new(id, x, y, food))
         }
     }
 

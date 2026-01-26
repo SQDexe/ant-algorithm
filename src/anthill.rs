@@ -49,9 +49,7 @@ impl AntHill {
         let do_ants_cosume = self.consume_rate != 0;
 
         /* Iter over unsatiated ants */
-        let iter = self.ants.iter_mut()
-            .filter(|ant| ! ant.satiated);
-        for ant in iter {
+        for ant in self.ants.iter_mut().filter(|ant| ! ant.satiated) {
             /* Get new position, and check if it's a foodsource */
             let new_position = world.get_new_position(&ant.route);
             let food_reached = world.is_foodsource(&new_position);
@@ -81,7 +79,7 @@ impl AntHill {
 
     /** Reset all ants. */
     pub fn reset(&mut self) {
-        for ant in self.ants.iter_mut() {
+        for ant in &mut self.ants {
             ant.reset(self.anthill_id);
             }
         }

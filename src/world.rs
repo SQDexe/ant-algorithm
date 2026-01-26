@@ -3,6 +3,7 @@ use {
         f64 as random_f64,
         usize as random_usize
         },
+    rustc_hash::FxBuildHasher,
     tinyvec::ArrayVec,
     sqds_tools::select,
     std::{
@@ -31,9 +32,9 @@ pub struct World {
     /** Auxils container. */
     auxils: ArrayVec<[Auxil; MAX_POINTS]>,
     /** Current points holding any food. */
-    foodsource_ids: HashSet<char>,
+    foodsource_ids: HashSet<char, FxBuildHasher>,
     /** Initial points holding any food. */
-    initial_foodsources: HashMap<char, u32>,
+    initial_foodsources: HashMap<char, u32, FxBuildHasher>,
     /** Number of decision points. */
     number_of_decision_points: usize,
     /** Function for acquiring new index. */
@@ -51,9 +52,9 @@ pub struct World {
 impl World {
     /** Constructor. */
     pub fn new(point_list: Vec<Point>, config: &Config) -> Self {
-        let (initial_foodsources, foodsource_ids): (HashMap<_, _>, HashSet<_>) = point_list.iter()
+        let (initial_foodsources, foodsource_ids): (HashMap<_, _, _>, HashSet<_, _>) = point_list.iter()
             .filter_map(|point|
-                point.has_food()
+                (! point.is_empty())
                     .then_some(((point.id, point.food), point.id))
                 )
             .unzip();
@@ -147,9 +148,7 @@ impl World {
 
     /** Reset auxils in sync with points - the ratios are overwritten each time. */
     fn reset_auxils(&mut self) {
-        let iter = self.auxils.iter_mut()
-            .zip(self.points.iter());
-        for (auxil, point) in iter {
+        for (auxil, point) in self.auxils.iter_mut().zip(&self.points) {
             auxil.id = point.id
             }
         }
@@ -163,7 +162,7 @@ impl World {
 
     /** Set pheromones according to passed function. */
     fn set_pheromones(&mut self, func: fn (&Point, f64) -> f64) {
-        for point in self.points.iter_mut() {
+        for point in &mut self.points {
             point.pheromone = func(point, self.factor).max(0.0)
             };
         }
@@ -195,7 +194,7 @@ impl World {
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         let iter = self.auxils.iter_mut()
-            .zip(self.points.iter());
+            .zip(&self.points);
         for (auxil, point) in iter {
             let viable = ! visited.contains(auxil.id) ||
                 self.foodsource_ids.contains(&current_id);
@@ -262,7 +261,7 @@ impl World {
 
         /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
         point.food = point.food.saturating_sub(amount);
-        if ! point.has_food() {
+        if point.is_empty() {
             self.foodsource_ids.remove(&position_id);
             }
         }
@@ -278,7 +277,7 @@ impl World {
         self.foodsource_ids.clear();
 
         /* Reset points */
-        for point in self.points.iter_mut() {
+        for point in &mut self.points {
             point.pheromone = 0.0;
 
             /* Additional reset if point had food initally */
