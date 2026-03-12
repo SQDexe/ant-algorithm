@@ -117,13 +117,8 @@ impl Simulator {
             let points_have_unique_postions = point_pos.len() == num_of_points;
             let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision);
             let positive_nonzero_pheromone_strength = PHERO_RANGE.contains(&pheromone);
-            let unset_or_correct_dispersion_factor = match (dispersion, factor) {
-                (Some(Dispersion::Linear), value) if DISP_LINEAR_RANGE.contains(&value) => true,
-                (Some(Dispersion::Exponential), value) if DISP_EXPONENTIAL_RANGE.contains(&value) => true,
-                (Some(Dispersion::Relative), value) if DISP_RELATIVE_RANGE.contains(&value) => true,
-                (None, value) if value.is_nan() => true,
-                _ => false
-                };
+            let unset_or_correct_dispersion_factor = (dispersion.is_none() && factor.is_nan()) ||
+                dispersion.is_some_and(|dis_mode| dis_mode.is_factor_valid(&factor));
             let valid_action_ids = point_ids.is_superset(&actions_ids);
             let anthill_has_no_food = anthill.is_empty() &&
                 ! actions_ids.contains(&anthill.id);

@@ -5,7 +5,8 @@ use {
     serde::{ Deserialize, Serialize },
     tinyvec::ArrayVec,
     sqds_tools::ShowOption,
-    core::str::FromStr
+    core::str::FromStr,
+    crate::consts::limits::{ DISPERSION_LINEAR_RANGE, DISPERSION_EXPONENTIAL_RANGE, DISPERSION_RELATIVE_RANGE }
     };
 
 
@@ -52,6 +53,17 @@ pub enum Dispersion {
     Linear,
     Exponential,
     Relative
+    }
+
+impl Dispersion {
+    /** `factor` coefficent checker. */
+    pub fn is_factor_valid(&self, factor: &f64) -> bool {
+        match self {
+            Self::Linear => DISPERSION_LINEAR_RANGE.contains(factor),
+            Self::Exponential => DISPERSION_EXPONENTIAL_RANGE.contains(factor),
+            Self::Relative => DISPERSION_RELATIVE_RANGE.contains(factor)
+            }
+        } 
     }
 
 /** **Technical part** - cycle action. */

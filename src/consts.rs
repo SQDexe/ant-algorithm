@@ -77,11 +77,11 @@ pub mod limits {
     /** Allowed range for simulation repetitions. */
     pub const BATCH_RANGE: Range<u64> = 1 .. 1000;
     /** Allowed range for linear dispersion coefficient. */
-    pub const DISP_LINEAR_RANGE: RangeFrom<f64> = 0.0 ..;
+    pub const DISPERSION_LINEAR_RANGE: RangeFrom<f64> = 0.0 ..;
     /** Allowed range for exponential dispersion coefficient. */
-    pub const DISP_EXPONENTIAL_RANGE: RangeFrom<f64> = 1.0 ..;
+    pub const DISPERSION_EXPONENTIAL_RANGE: RangeFrom<f64> = 1.0 ..;
     /** Allowed range for relative dispersion coefficient. */
-    pub const DISP_RELATIVE_RANGE: RangeInclusive<f64> = 0.0 ..= 1.0;
+    pub const DISPERSION_RELATIVE_RANGE: RangeInclusive<f64> = 0.0 ..= 1.0;
 
     /** Shorthand for maximal number of points. */
     pub const MAX_POINTS: usize = POINTS_RANGE.end;
