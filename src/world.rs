@@ -8,6 +8,7 @@ use {
     sqds_tools::select,
     std::{
         collections::{ HashSet, HashMap },
+        fmt::Write,
         process::exit
         },
     core::iter::repeat_with,
@@ -290,30 +291,34 @@ impl World {
 
     /** Show a table of states of all points. */
     pub fn show(&self) {
-        let tmp: String = self.points.iter()
-            .map(|Point { id, food, pheromone, .. }|
-                format!("| # {id}: {food:>4} - {pheromone}\n")
-                )
-            .collect();
+        /* Preallocate string, 47 bytes is a rough estimate of format string length */
+        let mut tmp = String::with_capacity(self.points.len() * 47);
 
-        println!(
-"| o>--- world ---<o
-{tmp}| o>-------------<o"
-            );
+        /* Fill the string */
+        for Point { id, food, pheromone, .. } in &self.points {
+            _ = writeln!(tmp, "| # {id}: {food:>4} - {pheromone}");
+            }
+
+        /* Print the table */
+        println!("| o>--- world ---<o");
+        print!("{tmp}");
+        println!("| o>-------------<o");
         }
 
     /** Show a table of coordinates of all points. */
     pub fn show_grid(&self) {
-        let tmp: String = self.points.iter()
-            .map(|Point { id, x, y, .. }|
-                format!("| # {id}: ({x:>3},{y:>3})\n")
-                )
-            .collect();
+        /* Preallocate string, 26 bytes is a rough estimate of format string length */
+        let mut tmp = String::with_capacity(self.points.len() * 26);
 
-        println!(
-"o> ---- GRID ---- <o
-{tmp}o> -------------- <o"
-            );
+        /* Fill the string */
+        for Point { id, x, y, .. } in &self.points {
+            _ = writeln!(tmp, "| # {id}: ({x:>3},{y:>3})");
+            }
+
+        /* Print the table */
+        println!("o> ---- GRID ---- <o");
+        print!("{tmp}");
+        println!("o> -------------- <o");
         }
     /** `points`' length getter.` */
     #[inline]

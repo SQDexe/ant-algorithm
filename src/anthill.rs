@@ -1,4 +1,5 @@
 use {
+    std::fmt::Write,
     core::iter::repeat_with,
     crate::{
         tech::Config,
@@ -86,20 +87,22 @@ impl AntHill {
 
     /** Show a table of states of all ants. */
     pub fn show(&self) {
-        let tmp: String = self.ants.iter()
-            .map(|Ant { satiated, route, .. }|
-                format!("| {:>8} | {:>3} | {}\n",
-                    satiated, route.len(), route
-                    )
-                )
-            .collect();
+        /* Preallocate string, 37 bytes is a rough estimate of format string length */
+        let mut tmp = String::with_capacity(self.ants.len() * 37);
 
+        /* Fill the string */
+        for Ant { satiated, route, .. } in &self.ants {
+            _ = writeln!(tmp, "| {:>8} | {:>3} | {}", satiated, route.len(), route);
+            }
+
+        /* Print the table */
         println!(
 "| o>------- ants -------<o
 | satiated | len | route
-| ---------|-----|-------
-{tmp}| o>--------------------<o"
+| ---------|-----|-------"
             );
+        print!("{tmp}");
+        println!("| o>--------------------<o");
         }
 
     /** `average_route_length` getter. */
