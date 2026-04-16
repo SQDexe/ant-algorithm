@@ -107,17 +107,19 @@ impl AntHill {
 
     /** `average_route_length` getter. */
     pub fn get_average_route_length(&self) -> f64 {
-        self.ants.iter()
-            .map(|ant| ant.route.len() as f64)
-            .sum::<f64>() /
-            self.num_of_ants as f64
+        let sum: usize = self.ants.iter()
+            .map(|ant| ant.route.len())
+            .sum();
+
+        sum as f64 / self.num_of_ants as f64
         }
     /** `average_routes_count` getter. */
     pub fn get_average_routes_count(&self) -> f64 {
-        self.ants.iter()
-            .map(|ant| ant.routes_counter as f64)
-            .sum::<f64>() /
-            self.num_of_ants as f64
+        let sum: usize = self.ants.iter()
+            .map(|ant| ant.routes_counter as usize)
+            .sum();
+
+        sum as f64 / self.num_of_ants as f64
         }
     /** `satiated_ants_count` getter. */
     pub fn get_satiated_ants_count(&self) -> usize {
