@@ -1,12 +1,22 @@
 use {
-    anyhow::{ anyhow, Error },
+    anyhow::{
+        anyhow,
+        Error
+        },
     clap::ValueEnum,
     derive_more::Display,
-    serde::{ Deserialize, Serialize },
+    serde::{
+        Deserialize,
+        Serialize
+        },
     tinyvec::ArrayVec,
     sqds_tools::ShowOption,
     core::str::FromStr,
-    crate::consts::limits::{ DISPERSION_LINEAR_RANGE, DISPERSION_EXPONENTIAL_RANGE, DISPERSION_RELATIVE_RANGE }
+    crate::consts::limits::{
+        DISPERSION_LINEAR_RANGE,
+        DISPERSION_EXPONENTIAL_RANGE,
+        DISPERSION_RELATIVE_RANGE
+        }
     };
 
 

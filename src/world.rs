@@ -7,11 +7,16 @@ use {
     tinyvec::ArrayVec,
     sqds_tools::select,
     std::{
-        collections::{ HashSet, HashMap },
-        fmt::Write,
+        collections::{
+            HashSet,
+            HashMap
+            },
         process::exit
         },
-    core::iter::repeat_with,
+    core::{
+        fmt::Write,
+        iter::repeat_with
+        },
     crate::{
         consts::{
             bias,

@@ -1,5 +1,8 @@
 use {
-    anyhow::{ anyhow, Error },
+    anyhow::{
+        anyhow,
+        Error
+        },
     tinyvec::ArrayVec,
     core::str::FromStr,
     crate::consts::limits::GRID_RANGE

@@ -1,6 +1,8 @@
 use {
-    std::fmt::Write,
-    core::iter::repeat_with,
+    core::{
+        fmt::Write,
+        iter::repeat_with
+        },
     crate::{
         tech::Config,
         utils::Ant,
