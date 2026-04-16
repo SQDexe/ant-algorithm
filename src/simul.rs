@@ -85,7 +85,7 @@ impl Simulator {
             args.actions.unwrap_or_default()
             );
         let num_of_points = grid.len();
-        /* Unsafe note - get is safe, because the points will never be empty */
+        /* SAFETY: get is safe, because the points will never be empty */
         let anthill = unsafe {
             grid.get_unchecked(0)
             };
@@ -244,7 +244,7 @@ impl Simulator {
     
     /** Show operation for singular simulation. */
     fn show_one(&self) {
-        /* Unsafe note - get is safe, because the points will never be empty */
+        /* SAFETY: get is safe, because the points will never be empty */
         let stats = unsafe {
             self.stats.get_unchecked(0)
             };

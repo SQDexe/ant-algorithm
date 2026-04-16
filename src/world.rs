@@ -186,7 +186,7 @@ impl World {
 
         /* Get current postion's id, and coordinates */
         let (current_id, current_x, current_y) = {
-            /* Unsafe note - unwrap is safe, because the route will never be empty */
+            /* SAFETY: unwrap is safe, because the route will never be empty */
             let id = unsafe {
                 visited.chars()
                     .last()
@@ -243,7 +243,7 @@ impl World {
         }
 
     fn find_point(&mut self, position_id: char) -> &mut Point {
-        /* Unsafe note - unwrap is safe, because the point ids are checked during the setup */
+        /* SAFETY: unwrap is safe, because the point ids are checked during the setup */
         unsafe {
             /* Try finding the point */
             self.points.iter_mut()
