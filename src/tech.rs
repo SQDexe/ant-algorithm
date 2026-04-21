@@ -3,13 +3,13 @@ use {
         anyhow,
         Error
         },
+    arrayvec::ArrayVec,
     clap::ValueEnum,
     derive_more::Display,
     serde::{
         Deserialize,
         Serialize
         },
-    tinyvec::ArrayVec,
     sqds_tools::ShowOption,
     core::str::FromStr,
     crate::consts::limits::{
@@ -90,7 +90,7 @@ impl FromStr for Action {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         /* Collect split text elements */
-        let parts: ArrayVec<[_; 3]> = s.splitn(3, ',').collect();
+        let parts: ArrayVec<_, 3> = s.splitn(3, ',').collect();
 
         /* Try destructing, and parsing */
         let [cycle, id, food] = parts.as_slice() else {

@@ -3,7 +3,7 @@ use {
         anyhow,
         Error
         },
-    tinyvec::ArrayVec,
+    arrayvec::ArrayVec,
     core::str::FromStr,
     crate::consts::limits::GRID_RANGE
     };
@@ -82,7 +82,7 @@ impl FromStr for Point {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         /* Collect split text elements */
-        let parts: ArrayVec<[_; 4]> = s.splitn(4, ',').collect();
+        let parts: ArrayVec<_, 4> = s.splitn(4, ',').collect();
 
         /* Try destructing, otherwise throw error */
         let (str_id, str_x, str_y, food) = match parts.as_slice() {

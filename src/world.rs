@@ -1,10 +1,10 @@
 use {
+    arrayvec::ArrayVec,
     fastrand::{
         f64 as random_f64,
         usize as random_usize
         },
     rustc_hash::FxBuildHasher,
-    tinyvec::ArrayVec,
     sqds_tools::select,
     std::{
         collections::{
@@ -34,9 +34,9 @@ pub struct World {
     /** Number of points of the grid. */
     num_of_points: usize,
     /** Points container. */
-    points: ArrayVec<[Point; MAX_POINTS]>,
+    points: ArrayVec<Point, MAX_POINTS>,
     /** Auxils container. */
-    auxils: ArrayVec<[Auxil; MAX_POINTS]>,
+    auxils: ArrayVec<Auxil, MAX_POINTS>,
     /** Current points holding any food. */
     foodsource_ids: HashSet<char, FxBuildHasher>,
     /** Initial points holding any food. */
@@ -122,7 +122,7 @@ impl World {
     /** Roulette selection method. */
     fn select_roulette(&self) -> usize {
         /* Get helper array */
-        let wheel: ArrayVec<[f64; MAX_POINTS]> = {
+        let wheel: ArrayVec<f64, MAX_POINTS> = {
             let iter = self.auxils.iter()
                 .take(self.number_of_decision_points)
                 .map(|auxil| auxil.ratio);
