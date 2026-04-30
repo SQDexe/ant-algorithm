@@ -15,7 +15,10 @@ use {
         },
     core::{
         fmt::Write,
-        iter::repeat_with
+        iter::{
+            repeat_with,
+            zip
+            }
         },
     crate::{
         consts::{
@@ -154,7 +157,7 @@ impl World {
 
     /** Reset auxils in sync with points - the ratios are overwritten each time. */
     fn reset_auxils(&mut self) {
-        for (auxil, point) in self.auxils.iter_mut().zip(&self.points) {
+        for (auxil, point) in zip(&mut self.auxils, &self.points) {
             auxil.id = point.id
             }
         }
@@ -199,9 +202,7 @@ impl World {
             };
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
-        let iter = self.auxils.iter_mut()
-            .zip(&self.points);
-        for (auxil, point) in iter {
+        for (auxil, point) in zip(&mut self.auxils, &self.points) {
             let viable = ! visited.contains(auxil.id) ||
                 self.foodsource_ids.contains(&current_id);
             auxil.ratio = select!(viable,

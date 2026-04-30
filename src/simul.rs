@@ -22,6 +22,7 @@ use {
             },
         path::Path
         },
+    core::iter::zip,
     crate::{
         anthill::AntHill,
         args::Args,
@@ -315,8 +316,7 @@ o> ------------------------------ <o",
             total.average_returns += stat.average_returns;
             total_complete_routes += stat.completed as usize;
   
-            for (i, (strength, avg_strength)) in stat.pheromone_strengths.iter()
-            .zip(stat.get_pheromone_per_route())
+            for (i, (strength, avg_strength)) in zip(&stat.pheromone_strengths, stat.get_pheromone_per_route())
             .enumerate() {
                 total.pheromone_strengths[i] += strength;
                 total_pheromone_per_route[i] += avg_strength;
@@ -329,8 +329,7 @@ o> ------------------------------ <o",
         /* Average out the totals */
         let avg_route_len = total.average_route_len / batch;
         let avg_returns = total.average_returns / batch;
-        let (avg_pheromone_strengths, avg_pheromone_per_route) = total.pheromone_strengths.iter()
-            .zip(&total_pheromone_per_route)
+        let (avg_pheromone_strengths, avg_pheromone_per_route) = zip(&total.pheromone_strengths, &total_pheromone_per_route)
             .map(|(n, m)| (n / batch, m / batch))
             .unzip();
         let avg_ants_per_phase = total.ants_per_phase.iter()
