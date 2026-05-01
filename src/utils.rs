@@ -174,29 +174,77 @@ pub mod disperse {
 pub mod preference {
     use crate::{
         consts::bias,
-        tech::DistanceFunction,
+        tech::Metric,
         utils::Point
         };
 
     /** Point prefrence calculation for distance. */
-    pub fn distance(point: &Point, x: i16, y: i16, dist_func: DistanceFunction) -> f64
-        { bias::NEUTRAL / dist_func(x, y, point.x, point.y) }
+    pub fn distance(point: &Point, x: i16, y: i16, metric: Metric) -> f64
+        { bias::NEUTRAL / metric.calculate(x, y, point.x, point.y) }
     /** Point prefrence calculation for pheromones. */
-    pub const fn pheromone(point: &Point, _: i16, _: i16, _: DistanceFunction) -> f64
+    pub const fn pheromone(point: &Point) -> f64
         { point.pheromone + bias::NEUTRAL }
     /** Point prefrence calculation for food. */
-    pub const fn food(point: &Point, _: i16, _: i16, _: DistanceFunction) -> f64
+    pub const fn food(point: &Point) -> f64
         { point.food as f64 + bias::NEUTRAL }
     /** Point prefrence calculation for pheromones, and distance. */
-    pub fn phero_dist(point: &Point, x: i16, y: i16, dist_func: DistanceFunction) -> f64
-        { (point.pheromone + bias::NEUTRAL) / dist_func(x, y, point.x, point.y) }
+    pub fn phero_dist(point: &Point, x: i16, y: i16, metric: Metric) -> f64
+        { (point.pheromone + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
     /** Point prefrence calculation for food, and distance. */
-    pub fn food_dist(point: &Point, x: i16, y: i16, dist_func: DistanceFunction) -> f64
-        { (point.food as f64 + bias::NEUTRAL) / dist_func(x, y, point.x, point.y) }
+    pub fn food_dist(point: &Point, x: i16, y: i16, metric: Metric) -> f64
+        { (point.food as f64 + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
     /** Point prefrence calculation for pheromones, and food. */
-    pub const fn phero_food(point: &Point, _: i16, _: i16, _: DistanceFunction) -> f64
+    pub const fn phero_food(point: &Point) -> f64
         { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) }
     /** Point prefrence calculation for pheromones, food, and distance. */
-    pub fn phero_food_dist(point: &Point, x: i16, y: i16, dist_func: DistanceFunction) -> f64
-        { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) / dist_func(x, y, point.x, point.y) }
+    pub fn phero_food_dist(point: &Point, x: i16, y: i16, metric: Metric) -> f64
+        { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
+    }
+
+/** Functions for calculating new indices. */
+pub mod selection {
+    use {
+        fastrand::{
+            f64 as random_f64,
+            usize as random_usize
+            },
+        crate::utils::Auxil
+        };
+
+    /** Greedy selection method. */
+    #[inline]
+    pub const fn greedy() -> usize
+        { 0 }
+    /** Random selection method. */
+    pub fn randomly(decision_points: usize) -> usize {
+        random_usize(.. decision_points)
+        }
+    /** Roulette selection method. */
+    pub fn roulette(decision_points: usize, axuils: &[Auxil]) -> usize {
+        /* Get helper array */
+        /* SAFETY: It is safe, because decision points, are always within range of auxils */
+        let wheel = unsafe {
+            axuils.get_unchecked(.. decision_points)
+            };
+
+        /* Sum the wheel */
+        let sum: f64 = wheel.iter()
+            .map(|auxil| auxil.ratio)
+            .sum();
+        
+        /* Select random chance, and scale it with the sum */
+        let chance = random_f64() * sum;
+
+        /* Spin the wheel until it stops */
+        let mut accumulator = 0.0;
+        for (index, auxil) in wheel.into_iter().enumerate() {
+            accumulator += auxil.ratio;
+            if chance < accumulator {
+                return index;
+                }
+            }
+
+        /* Fallback for rare float precision errors */
+        decision_points.saturating_sub(1)
+        }
     }

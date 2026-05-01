@@ -1,9 +1,5 @@
 use {
     arrayvec::ArrayVec,
-    fastrand::{
-        f64 as random_f64,
-        usize as random_usize
-        },
     rustc_hash::FxBuildHasher,
     sqds_tools::select,
     std::{
@@ -46,16 +42,14 @@ pub struct World {
     initial_foodsources: HashMap<char, u32, FxBuildHasher>,
     /** Number of decision points. */
     number_of_decision_points: usize,
-    /** Function for acquiring new index. */
-    get_index_operation: fn (&Self) -> usize,
-    /** Function for calculating point prefrence. */
-    preference_operation: fn (&Point, i16, i16, DistanceFunction) -> f64,
-    /** Function for calculating distance. */
-    distance_operation: DistanceFunction,
-    /** Function for calculating dispersion. */
-    disperse_operation: fn (&Point, f64) -> f64,
-    /** Possible dispersion coefficient. */
-    factor: f64
+    /** Method of acquiring new index. */
+    selection_method: Selection,
+    /** Method of calculating point prefrence. */
+    preference_method: Preference,
+    /** Method of calculating distance. */
+    distance_method: Metric,
+    /** Possible method of calculating dispersion, with it's coefficient. */
+    dispersion_method: Option<(Dispersion, f64)>
     }
 
 impl World {
@@ -85,74 +79,11 @@ impl World {
             foodsource_ids,
             initial_foodsources,
             number_of_decision_points: config.decision,
-            get_index_operation: match config.select {
-                Selection::Random => World::select_randomly,
-                Selection::Roulette => World::select_roulette,
-                Selection::Greedy => World::select_greedy
-                },
-            preference_operation: match config.preference {
-                Preference::Distance => preference::distance,
-                Preference::Pheromone => preference::pheromone,
-                Preference::Food => preference::food,
-                Preference::PD => preference::phero_dist,
-                Preference::FD => preference::food_dist,
-                Preference::PF => preference::phero_food,
-                Preference::PFD => preference::phero_food_dist
-                },
-            distance_operation: match config.metric {
-                Metric::Chebyshev => distance::chebyshev,
-                Metric::Euclidean => distance::euclidean,
-                Metric::Taxicab => distance::taxicab
-                },
-            disperse_operation: match config.dispersion {
-                Some(Dispersion::Linear) => disperse::linear,
-                Some(Dispersion::Exponential) => disperse::exponential,
-                Some(Dispersion::Relative) => disperse::relative,
-                _ => |_, _| bias::UNKOWN
-                },
-            factor: config.factor
+            selection_method: config.select,
+            preference_method: config.preference,
+            distance_method: config.metric,
+            dispersion_method: config.dispersion.map(|dispersion| (dispersion, config.factor))
             }
-        }
-
-    /** Greedy selection method. */
-    #[inline]
-    const fn select_greedy(&self) -> usize
-        { 0 }
-    /** Random selection method. */
-    fn select_randomly(&self) -> usize {
-        random_usize(0 .. self.number_of_decision_points)
-        }
-    /** Roulette selection method. */
-    fn select_roulette(&self) -> usize {
-        /* Get helper array */
-        let wheel: ArrayVec<f64, MAX_POINTS> = {
-            let iter = self.auxils.iter()
-                .take(self.number_of_decision_points)
-                .map(|auxil| auxil.ratio);
-
-            /* Sum ratios within range */
-            let sum: f64 = iter.clone()
-                .sum();
-
-            /* Collect helper array into roulette wheel */
-            iter.map(|ratio| ratio / sum)
-                .collect()
-            };
-
-        /* First choice from the wheel */
-        let mut index = 0;
-        let mut rest = wheel[index];
-        
-        /* Select random chance */
-        let chance = random_f64();
-
-        /* Spin the wheel until it stops */
-        while rest < chance {
-            index += 1;
-            rest += wheel[index];
-            }
-
-        index
         }
 
     /** Reset auxils in sync with points - the ratios are overwritten each time. */
@@ -167,13 +98,6 @@ impl World {
         self.auxils.sort_unstable_by(|a, b|
             b.ratio.total_cmp(&a.ratio)
             );
-        }
-
-    /** Set pheromones according to passed function. */
-    fn set_pheromones(&mut self, func: fn (&Point, f64) -> f64) {
-        for point in &mut self.points {
-            point.pheromone = func(point, self.factor).max(0.0)
-            };
         }
 
     /** Create new position according to passed arguments. */
@@ -205,8 +129,10 @@ impl World {
         for (auxil, point) in zip(&mut self.auxils, &self.points) {
             let viable = ! visited.contains(auxil.id) ||
                 self.foodsource_ids.contains(&current_id);
+
+            /* If valiable, assign new ratio, otherwise, assign lowest value */
             auxil.ratio = select!(viable,
-                (self.preference_operation)(point, current_x, current_y, self.distance_operation),
+                self.preference_method.calculate(point, current_x, current_y, self.distance_method),
                 bias::MINUTE
                 )
             };
@@ -214,16 +140,24 @@ impl World {
         /* Sort the helper array */
         self.sort_auxils();
 
-        /* Get first new guess */
-        let mut choice = (self.get_index_operation)(self);
+        /* New position */
+        let choice = loop {
+            /* Get new position index */
+            let index = self.selection_method.calculate(self.number_of_decision_points, &self.auxils);
 
-        /* Double check, if not visited already */
-        while visited.contains(self.auxils[choice].id) {
-            choice = (self.get_index_operation)(self);
-            }
+            /* SAFETY: Returned index will always be in range */
+            let auxil = unsafe {
+                self.auxils.get_unchecked(index)
+                };
+
+            /* Get new guesses, until unvisited is found */
+            if ! visited.contains(auxil.id) {
+                break auxil;
+                }
+            };
         
         /* Return id of new position */
-        self.auxils[choice].id
+        choice.id
         }
 
     /** Cover the route with pheromones. */
@@ -238,9 +172,13 @@ impl World {
             }
         }
 
-    /** Reduce amount of pheromones according to the function. */
+    /** Reduce amount of pheromones according to the function, if applicable. */
     pub fn disperse_pheromons(&mut self) {
-        self.set_pheromones(self.disperse_operation);
+        if let Some((dispersion, factor)) = self.dispersion_method {
+            for point in &mut self.points {
+                point.pheromone = dispersion.calculate(point, factor).max(0.0)
+                }
+            }
         }
 
     fn find_point(&mut self, position_id: char) -> &mut Point {

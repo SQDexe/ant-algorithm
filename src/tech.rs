@@ -12,17 +12,24 @@ use {
         },
     sqds_tools::ShowOption,
     core::str::FromStr,
-    crate::consts::limits::{
-        DISPERSION_LINEAR_RANGE,
-        DISPERSION_EXPONENTIAL_RANGE,
-        DISPERSION_RELATIVE_RANGE
+    crate::{
+        consts::limits::{
+            DISPERSION_LINEAR_RANGE,
+            DISPERSION_EXPONENTIAL_RANGE,
+            DISPERSION_RELATIVE_RANGE
+            },
+        utils::{
+            Auxil,
+            Point,
+            disperse::*,
+            distance::*,
+            preference::*,
+            selection::*
+            }
         }
     };
 
 
-
-/** **Technical part** - alias for distance calculation function. */
-pub type DistanceFunction = fn (i16, i16, i16, i16) -> f64;
 
 /* **Technical part** - type of next point selection enum. */
 #[derive(Clone, Copy, Display, ValueEnum)]
@@ -30,6 +37,17 @@ pub enum Selection {
     Greedy,
     Random,
     Roulette
+    }
+
+impl Selection {
+    /** Calculates the new index based on the number of decision points, and slice of helper structs. */
+    pub fn calculate(&self, decision_points: usize, auxils: &[Auxil]) -> usize {
+        match self {
+            Self::Greedy => greedy(),
+            Self::Random => randomly(decision_points),
+            Self::Roulette => roulette(decision_points, auxils)
+            }
+        }
     }
 
 /**
@@ -49,12 +67,38 @@ pub enum Preference {
     PFD
     }
 
+impl Preference {
+    /** Calculates the point preference based on the point's values, current coordinates, and the metric. */
+    pub fn calculate(&self, point: &Point, x: i16, y: i16, metric: Metric) -> f64 {
+        match self {
+            Self::Distance => distance(point, x, y, metric),
+            Self::Pheromone => pheromone(point),
+            Self::Food => food(point),
+            Self::PD => phero_dist(point, x, y, metric),
+            Self::FD => food_dist(point, x, y, metric),
+            Self::PF => phero_food(point),
+            Self::PFD => phero_food_dist(point, x, y, metric),
+            }
+        }
+    }
+
 /** **Technical part** - types of metrics for distance calculation enum. */
 #[derive(Clone, Copy, Display, ValueEnum)]
 pub enum Metric {
     Chebyshev,
     Euclidean,
     Taxicab
+    }
+
+impl Metric {
+    /** Calculates the distance based on points' coordinates. */
+    pub fn calculate(&self, x0: i16, y0: i16, x1: i16, y1: i16) -> f64 {
+        match self {
+            Self::Chebyshev => chebyshev(x0, y0, x1, y1),
+            Self::Euclidean => euclidean(x0, y0, x1, y1),
+            Self::Taxicab => taxicab(x0, y0, x1, y1)
+            }
+        }
     }
 
 /** **Technical part** - types of pheromone dispersion enum. */
@@ -66,14 +110,23 @@ pub enum Dispersion {
     }
 
 impl Dispersion {
-    /** `factor` coefficent checker. */
+    /** `factor` coefficient checker. */
     pub fn is_factor_valid(&self, factor: &f64) -> bool {
         match self {
             Self::Linear => DISPERSION_LINEAR_RANGE.contains(factor),
             Self::Exponential => DISPERSION_EXPONENTIAL_RANGE.contains(factor),
             Self::Relative => DISPERSION_RELATIVE_RANGE.contains(factor)
             }
-        } 
+        }
+
+    /** Calculates the dispersion based on the point's values, and the coefficient */
+    pub fn calculate(&self, point: &Point, factor: f64) -> f64 {
+        match self {
+            Self::Linear => linear(point, factor),
+            Self::Exponential => exponential(point, factor),
+            Self::Relative => relative(point, factor)
+            }
+        }
     }
 
 /** **Technical part** - cycle action. */

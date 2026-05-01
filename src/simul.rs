@@ -204,10 +204,8 @@ impl Simulator {
                 /* Make simulation step */
                 self.ant_hill.action(&mut self.world);
 
-                /* Disperse pheromones, if applicable */
-                if self.config.dispersion.is_some() {
-                    self.world.disperse_pheromons();
-                    }
+                /* Disperse pheromones */
+                self.world.disperse_pheromons();
 
                 /* Execute actions, if applicable */
                 if let Some(acts) = self.actions.get(&phase) {
