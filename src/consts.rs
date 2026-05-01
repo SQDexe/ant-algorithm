@@ -62,7 +62,8 @@ pub mod limits {
     use core::ops::{
         Range,
         RangeFrom,
-        RangeInclusive
+        RangeInclusive,
+        RangeTo
         };
 
     /** Allowed range for point coordinates. */
@@ -74,6 +75,8 @@ pub mod limits {
         POINTS_RANGE.start as u64 .. POINTS_RANGE.end as u64;
     /** Allowed range for number of ants. */
     pub const ANTS_RANGE: RangeInclusive<u64> = 1 ..= 0xffffff;
+    /** Allowed range for printing of ants' data. */
+    pub const PRINTABLE_ANTS_RANGE: RangeTo<usize> = .. 0xfff;
     /** Allowed range for number of cycles. */
     pub const CYCLES_RANGE: Range<u64> = 1 .. 100;
     /** Allowed range for pheromone strength. */

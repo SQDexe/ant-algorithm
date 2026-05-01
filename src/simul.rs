@@ -146,11 +146,11 @@ impl Simulator {
         let singleton = batch == 1;
         
         /* Set whether to log information */
-        let logs = if ! args.quiet && (0xfff < args.ants || ! singleton) {
+        let logs = if args.quiet || (PRINTABLE_ANTS_RANGE.contains(&ants) && singleton) {
+            ! args.quiet
+        } else {
             eprintln!("[INFO]: Logging hidden");
             false
-        } else {
-            ! args.quiet
             };
 
         /* Create configuration container */
