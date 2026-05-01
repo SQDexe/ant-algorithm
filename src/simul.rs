@@ -43,6 +43,8 @@ use {
 pub struct Simulator {
     /** Whether logging should happen. */
     logs: bool,
+    /** Whether the simulation runs once. */
+    singleton: bool,
     /** Number or repetitions. */
     batch_size: usize,
     /** Simulation's configuration. */
@@ -54,9 +56,7 @@ pub struct Simulator {
     /** World space object. */
     world: World,
     /** Statistics for each simulation run. */
-    stats: Vec<Stats>,
-    /** Operation for showing the statistics. */
-    show_operation: fn (&Self)
+    stats: Vec<Stats>
     }
 
 impl Simulator {
@@ -171,16 +171,13 @@ impl Simulator {
         /* Create Simulator object */
         Self {
             logs,
+            singleton,
             batch_size: batch,
             config,
             actions,
             stats: Vec::with_capacity(batch),         
             ant_hill,
-            world,
-            show_operation: select!(singleton,
-                Self::show_one,
-                Self::show_avg
-                )
+            world
             }
         }
 
@@ -346,7 +343,10 @@ o> ------------------------------ <o",
         self.config.show();
 
         /* Show simulation's statistics */
-        (self.show_operation)(self);
+        select!(self.singleton,
+            self.show_one(),
+            self.show_avg()
+            )
         }
 
     /** Write statistics to file. */
