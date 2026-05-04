@@ -232,7 +232,7 @@ pub struct Stats {
 
 impl Stats {
     /** `pheromone_per_route` getter. */
-    pub fn get_pheromone_per_route(&self) -> Vec<f64> {
+    pub fn pheromone_per_route(&self) -> Vec<f64> {
         self.pheromone_strengths.iter()
             .map(|phero| phero / self.average_returns)
             .collect()

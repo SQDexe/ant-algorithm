@@ -277,12 +277,13 @@ impl World {
         print!("{tmp}");
         println!("o> -------------- <o");
         }
+
     /** `points`' length getter.` */
     #[inline]
-    pub const fn get_number_of_points(&self) -> usize
+    pub const fn number_of_points(&self) -> usize
         { self.num_of_points }
     /** `pheromones_per_point` getter. */
-    pub fn get_pheromones_per_point(&self) -> Vec<f64> {
+    pub fn pheromones_per_point(&self) -> Vec<f64> {
         self.points.iter()
             .map(|point| point.pheromone)
             .collect()

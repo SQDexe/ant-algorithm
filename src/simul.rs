@@ -213,7 +213,7 @@ impl Simulator {
                     }
 
                 /* Gather statistics */
-                stats.ants_per_phase.push(self.ant_hill.get_satiated_ants_count());
+                stats.ants_per_phase.push(self.ant_hill.satiated_ants_count());
 
                 /* Print information, if applicable */
                 if self.logs {
@@ -226,9 +226,9 @@ impl Simulator {
 
             /* Gather final statistics */
             stats.completed = self.ant_hill.has_all_ants_satiated();
-            stats.pheromone_strengths = self.world.get_pheromones_per_point();
-            stats.average_route_len = self.ant_hill.get_average_route_length();
-            stats.average_returns = self.ant_hill.get_average_routes_count();
+            stats.pheromone_strengths = self.world.pheromones_per_point();
+            stats.average_route_len = self.ant_hill.average_route_length();
+            stats.average_returns = self.ant_hill.average_routes_count();
 
             /* Add statistics */
             self.stats.push(stats);
@@ -260,7 +260,7 @@ o> ------------------------------ <o",
             stats.average_route_len,
             stats.ants_per_phase.show_slice(),
             stats.average_returns,
-            stats.get_pheromone_per_route().show_slice()
+            stats.pheromone_per_route().show_slice()
             );
         }
     
@@ -273,7 +273,7 @@ o> ------------------------------ <o",
             ants_per_phase,
             returns,
             pheromone_per_route
-            ) = self.get_average_stats();
+            ) = self.average_stats();
 
         println!(
 "o> ------ AVG STATS OF {:>3} ------ <o
@@ -295,8 +295,8 @@ o> ------------------------------ <o",
         }
 
     /** `average_stats` getter */
-    fn get_average_stats(&self) -> (usize, Vec<f64>, f64, Vec<f64>, f64, Vec<f64>) {
-        let number_of_points = self.world.get_number_of_points();
+    fn average_stats(&self) -> (usize, Vec<f64>, f64, Vec<f64>, f64, Vec<f64>) {
+        let number_of_points = self.world.number_of_points();
         let batch = self.batch_size as f64;
 
         /* Set empty containers */
@@ -312,7 +312,7 @@ o> ------------------------------ <o",
             total.average_returns += stat.average_returns;
             total_complete_routes += stat.completed as usize;
   
-            for (i, (strength, avg_strength)) in zip(&stat.pheromone_strengths, stat.get_pheromone_per_route())
+            for (i, (strength, avg_strength)) in zip(&stat.pheromone_strengths, stat.pheromone_per_route())
             .enumerate() {
                 total.pheromone_strengths[i] += strength;
                 total_pheromone_per_route[i] += avg_strength;
