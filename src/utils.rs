@@ -221,14 +221,8 @@ pub mod selection {
         }
     /** Roulette selection method. */
     pub fn roulette(decision_points: usize, axuils: &[Auxil]) -> usize {
-        /* Get helper array */
-        /* SAFETY: It is safe, because decision points, are always within range of auxils */
-        let wheel = unsafe {
-            axuils.get_unchecked(.. decision_points)
-            };
-
         /* Sum the wheel */
-        let sum: f64 = wheel.iter()
+        let sum: f64 = axuils.iter()
             .map(|auxil| auxil.ratio)
             .sum();
         
@@ -237,7 +231,7 @@ pub mod selection {
 
         /* Spin the wheel until it stops */
         let mut accumulator = 0.0;
-        for (index, auxil) in wheel.into_iter().enumerate() {
+        for (index, auxil) in axuils.into_iter().enumerate() {
             accumulator += auxil.ratio;
             if chance < accumulator {
                 return index;

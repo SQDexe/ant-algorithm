@@ -100,17 +100,8 @@ impl World {
             );
         }
 
-    /** Create new position according to passed arguments. */
-    pub fn get_new_position(&mut self, visited: &str) -> char {
-        /* Clear the helper array */
-        self.reset_auxils();
-        
-        /* Safety check - stop the simulation if true */
-        if self.foodsource_ids.is_empty() {
-            eprintln!("[ERROR]: A problem occured while trying to find foodsources - simulation stopped");
-            exit(1);
-            }
-
+    /** Calculate new preference values for the points. */
+    fn calculate_preference(&mut self, visited: &str) {
         /* Get current postion's id, and coordinates */
         let (current_id, current_x, current_y) = {
             /* SAFETY: unwrap is safe, because the route will never be empty */
@@ -136,14 +127,35 @@ impl World {
                 bias::MINUTE
                 )
             };
+        }
+
+    /** Create new position according to passed arguments. */
+    pub fn get_new_position(&mut self, visited: &str) -> char {
+        /* Clear the helper array */
+        self.reset_auxils();
+        
+        /* Safety check - stop the simulation if true */
+        if self.foodsource_ids.is_empty() {
+            eprintln!("[ERROR]: A problem occured while trying to find foodsources - simulation stopped");
+            exit(1);
+            }
+
+        /* Preference calculation */
+        self.calculate_preference(visited);
 
         /* Sort the helper array */
         self.sort_auxils();
 
+        /* Select only auxils from the range */
+        /* SAFETY: Number of decision points is always within the number of points, checked during setup */
+        let auxils = unsafe {
+            self.auxils.get_unchecked(.. self.number_of_decision_points)
+            };
+
         /* New position */
         let choice = loop {
             /* Get new position index */
-            let index = self.selection_method.calculate(self.number_of_decision_points, &self.auxils);
+            let index = self.selection_method.calculate(self.number_of_decision_points, &auxils);
 
             /* SAFETY: Returned index will always be in range */
             let auxil = unsafe {
