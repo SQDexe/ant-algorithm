@@ -17,7 +17,7 @@ use {
 
 
 /** **Technical part** - parsing, and storing of the CL arguments. */
-#[derive(Parser)]
+#[derive(Debug, Clone, Parser)]
 #[command(author, version, about)]
 pub struct Args {
     /// Sets number of cycles  

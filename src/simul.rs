@@ -40,6 +40,7 @@ use {
 
 
 /** `Simulation` structure, for managing the instatiating, asserting correct configuration, simulation running, prinitng, and saving data. */
+#[derive(Debug, Clone)]
 pub struct Simulator {
     /** Whether logging should happen. */
     logs: bool,

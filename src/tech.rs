@@ -32,7 +32,7 @@ use {
 
 
 /* **Technical part** - type of next point selection enum. */
-#[derive(Clone, Copy, Display, ValueEnum)]
+#[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Selection {
     Greedy,
     Random,
@@ -56,7 +56,7 @@ impl Selection {
 - F - Food
 - D - Distance
 */
-#[derive(Clone, Copy, Display, ValueEnum)]
+#[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Preference {
     Distance,
     Pheromone,
@@ -83,7 +83,7 @@ impl Preference {
     }
 
 /** **Technical part** - types of metrics for distance calculation enum. */
-#[derive(Clone, Copy, Display, ValueEnum)]
+#[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Metric {
     Chebyshev,
     Euclidean,
@@ -102,7 +102,7 @@ impl Metric {
     }
 
 /** **Technical part** - types of pheromone dispersion enum. */
-#[derive(Clone, Copy, Display, ValueEnum)]
+#[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Dispersion {
     Linear,
     Exponential,
@@ -130,7 +130,7 @@ impl Dispersion {
     }
 
 /** **Technical part** - cycle action. */
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Action (
     pub usize,
     pub char,
@@ -160,6 +160,7 @@ impl FromStr for Action {
     }
 
 /** **Technical part** - structure for holding, and printing simulation's configuration. */
+#[derive(Debug, Clone)]
 pub struct Config {
     /** Number of cycles. */
     pub cycles: usize,
@@ -215,7 +216,7 @@ o> -------------------------- <o",
     }
 
 /** **Technical part** - structure for holding statistics of simulation's run, and operations needed for saving this data. */
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Stats {
     /** Whether all ants have finished their routes. */
     pub completed: bool,

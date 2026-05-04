@@ -13,6 +13,7 @@ use {
 
 
 /** `Anthill` strucutre, for handling `Ant`'s operations. */
+#[derive(Debug, Clone)]
 pub struct AntHill {
     /** Number of ants in the colony. */
     num_of_ants: usize,

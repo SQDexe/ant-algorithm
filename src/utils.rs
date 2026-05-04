@@ -11,6 +11,7 @@ use {
 
 
 /** `Ant` structure, basic logical unit. */
+#[derive(Debug, Clone)]
 pub struct Ant {
     /** Check, whether the ant found food. */
     pub satiated: bool,
@@ -49,7 +50,7 @@ impl Ant {
     }
 
 /** `Point` structure, for holding basic point data. */
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Point {
     /** Unique point ID. */
     pub id: char,
@@ -111,7 +112,7 @@ impl FromStr for Point {
     }
 
 /** Auxil structure, for calculation puropses. */
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Auxil {
     /** ID of refrenced point. */
     pub id: char,

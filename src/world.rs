@@ -29,6 +29,7 @@ use {
 
 
 /** `World` structure, for handling most of logic operations, and managing the grid. */
+#[derive(Debug, Clone)]
 pub struct World {
     /** Number of points of the grid. */
     num_of_points: usize,
