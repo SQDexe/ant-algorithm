@@ -1,9 +1,6 @@
+#![allow(unused)]
+
 use {
-    anyhow::{
-        anyhow,
-        Error
-        },
-    arrayvec::ArrayVec,
     clap::ValueEnum,
     derive_more::Display,
     serde::{
@@ -11,13 +8,25 @@ use {
         Serialize
         },
     sqds_tools::ShowOption,
-    core::str::FromStr,
+    std::path::PathBuf,
+    core::{
+        char::ParseCharError,
+        str::FromStr,
+        fmt::{
+            Write,
+            Formatter,
+            Result as FmtResult,
+            Display
+            },
+        iter::zip,
+        },
     crate::{
         consts::limits::{
             DISPERSION_LINEAR_RANGE,
             DISPERSION_EXPONENTIAL_RANGE,
             DISPERSION_RELATIVE_RANGE
             },
+        error::ParseActionError,
         utils::{
             Auxil,
             Point,
@@ -31,11 +40,116 @@ use {
 
 
 
+/** **Technical part** - type to represent a point ID. */
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+pub struct Id ( char );
+
+impl Id {
+    /** Constructor. */
+    #[inline]
+    pub const fn new(value: char) -> Self {
+        Self ( value )
+        }
+
+    /** Inner char getter. */
+    #[inline]
+    pub const fn get(&self) -> char {
+        self.0
+        }
+    }
+
+/* **Technical part** - trait implementation for ID printing. */
+impl Display for Id {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_char(self.0)
+        }
+    }
+
+/** **Technical part** - trait implementation for ID parsing. */
+impl FromStr for Id {
+    type Err = ParseCharError;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = s.parse()?;
+
+        Ok(Self( inner ))
+        }
+    }
+
+/** **Technical part** - type to represent a route. */
+#[derive(Debug, Clone, Default)]
+#[repr(transparent)]
+pub struct Route {
+    inner: String
+    }
+
+impl Route {
+    /** Constructor. */
+    pub const fn new() -> Self {
+        Self {
+            inner: String::new()
+            }
+        }
+
+    /** Constructor with capacity. */
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            inner: String::with_capacity(capacity)
+            }
+        }
+
+    /** `len` getter. */
+    #[inline]
+    pub const fn len(&self) -> usize {
+        self.inner.len()
+        }
+
+    /** Checks whether the route contains the Id. */
+    pub fn contains(&self, id: &Id) -> bool {
+        self.inner.contains(id.get())
+        }
+
+    /** Get the first Id in the route. */
+    pub fn first(&self) -> Option<Id> {
+        self.inner.chars()
+            .next()
+            .map(Id::new)
+        }
+
+    /** Get the last Id in the route. */
+    pub fn last(&self) -> Option<Id> {
+        self.inner.chars()
+            .last()
+            .map(Id::new)
+        }
+
+    /** Push new Id to the route. */
+    pub fn push(&mut self, id: Id) {
+        self.inner.push(id.get());
+        }
+
+    /** Clear the route. */
+    pub fn clear(&mut self) {
+        self.inner.clear();
+        }
+    }
+
+/* **Technical part** - trait implementation for route printing. */
+impl Display for Route {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.write_str(&self.inner)
+        }
+    }
+
 /* **Technical part** - type of next point selection enum. */
 #[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Selection {
+    /** Greedy selection method. */
     Greedy,
+    /** Random selection method. */
     Random,
+    /** Roulette selection method. */
     Roulette
     }
 
@@ -58,12 +172,19 @@ impl Selection {
 */
 #[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Preference {
+    /** Point prefrence calculation for distance. */
     Distance,
+    /** Point prefrence calculation for pheromones. */
     Pheromone,
+    /** Point prefrence calculation for food. */
     Food,
+    /** Point prefrence calculation for pheromones, and distance. */
     PD,
+    /** Point prefrence calculation for food, and distance. */
     FD,
+    /** Point prefrence calculation for pheromones, and food. */
     PF,
+    /** Point prefrence calculation for pheromones, food, and distance. */
     PFD
     }
 
@@ -85,8 +206,11 @@ impl Preference {
 /** **Technical part** - types of metrics for distance calculation enum. */
 #[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Metric {
+    /** Chebyshev metric distance calculation. */
     Chebyshev,
+    /** Euclidean metric distance calculation. */
     Euclidean,
+    /** Taxicab metric distance calculation. */
     Taxicab
     }
 
@@ -104,8 +228,11 @@ impl Metric {
 /** **Technical part** - types of pheromone dispersion enum. */
 #[derive(Debug, Clone, Copy, Display, ValueEnum)]
 pub enum Dispersion {
+    /** Linear dispersion calculation. */
     Linear,
+    /** Exponential dispersion calculation. */
     Exponential,
+    /** Relative dispersion calculation. */
     Relative
     }
 
@@ -133,29 +260,36 @@ impl Dispersion {
 #[derive(Debug, Clone)]
 pub struct Action (
     pub usize,
-    pub char,
+    pub Id,
     pub u32
     );
 
 /** **Technical part** - trait implementation for input parsing. */
 impl FromStr for Action {
-    type Err = Error;
+    type Err = ParseActionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         /* Collect split text elements */
-        let parts: ArrayVec<_, 3> = s.splitn(3, ',').collect();
+        let mut parts = s.splitn(3, ',');
 
-        /* Try destructing, and parsing */
-        let [cycle, id, food] = parts.as_slice() else {
-            return Err(anyhow!("Incorrect Action format"));
+        /* Try retriving elements from the iterator */
+        let str_elements = [parts.next(), parts.next(), parts.next()];
+        let [Some(str_cycle), Some(str_id), Some(str_food)] = str_elements else {
+            return Err(ParseActionError::InvalidFormat);
             };
 
-        /* Ouput */
-        Ok(Self(
-            cycle.parse()?,
-            id.parse()?,
-            food.parse()?
-            ))
+        /* Try parsing main elements */
+        let (cycle, id, food) = (
+            str_cycle.parse()
+                .map_err(|_| ParseActionError::FailedParseCycle)?,
+            str_id.parse()
+                .map_err(|_| ParseActionError::FailedParseId)?,
+            str_food.parse()
+                .map_err(|_| ParseActionError::FailedParseFoodAmount)?
+            );
+
+        /* Create action */
+        Ok(Self(cycle, id, food))
         }
     }
 
@@ -215,26 +349,121 @@ o> -------------------------- <o",
         }
     }
 
+/** **Technical part** - structure for grouping of simulation's configuration of outer actions. */
+#[derive(Debug, Clone)]
+pub struct ActionsConfig {
+    /** Whether simulation time should be displayed. */
+    pub counts_time: bool,
+    /** Possible path for the statistics' output file. */
+    pub output_path: Option<PathBuf>
+    }
+
+/** **Technical part** - structure for grouping of disjoint simulation's configuration. */
+#[derive(Debug, Clone)]
+pub struct DisjointConfig {
+    /** Whether simulation time should be displayed. */
+    pub no_logging: bool,
+    /** Possible path for the statistics' output file. */
+    pub batch_size: usize,
+    pub grid: Vec<Point>,
+    pub actions: Vec<Action>
+    }
+
 /** **Technical part** - structure for holding statistics of simulation's run, and operations needed for saving this data. */
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Stats {
     /** Whether all ants have finished their routes. */
     pub completed: bool,
     /** Final pheromone strengths for points in declaration order. */
-    pub pheromone_strengths: Vec<f64>,
+    pub pheromone_strengths: Box<[f64]>,
     /** Ant's average route length. */
     pub average_route_len: f64,
     /** Number of satiated ants for each cycle. */
-    pub ants_per_phase: Vec<usize>,
+    pub ants_per_phase: Box<[usize]>,
     /** Average number of routes per ant. */
-    pub average_returns: f64
+    pub completed_routes: f64
     }
 
 impl Stats {
     /** `pheromone_per_route` getter. */
-    pub fn pheromone_per_route(&self) -> Vec<f64> {
+    pub fn pheromone_per_route(&self) -> Box<[f64]> {
         self.pheromone_strengths.iter()
-            .map(|phero| phero / self.average_returns)
+            .map(|phero| phero / self.completed_routes)
             .collect()
+        }
+    }
+
+/** **Technical part** - structure for holding averaged statistics of a batch simulation. */
+#[derive(Debug, Clone)]
+pub struct AveragedStats {
+    /** Number of times simulation was run. */
+    pub batch_size: usize,
+    /** Number of times all ants reached the food source. */
+    pub total_complete_routes: usize,
+    /** Average amount of pheromones on each point. */
+    pub avg_pheromone_strengths: Box<[f64]>,
+    /** Average ants' route length. */
+    pub avg_route_len: f64,
+    /** Average amount of satiated ants for each cycle. */
+    pub avg_ants_per_phase: Box<[f64]>,
+    /** Average number of routes per ant. */
+    pub avg_completed_routes: f64,
+    /** Average amount of pheromones on each point per average routes. */
+    pub avg_pheromone_per_route: Box<[f64]>,
+    }
+
+impl AveragedStats {
+    /** Constructor. */
+    pub fn new(stats: &[Stats], cycles: usize, number_of_points: usize, batch_size: usize) -> Self {
+        let batch = batch_size as f64;
+
+        /* Set empty containers */
+        let mut total_route_len = 0.0;
+        let mut total_returns = 0.0;
+        let mut total_complete_routes = 0;
+
+        let mut total_pheromone_strengths = vec![0.0; number_of_points].into_boxed_slice();
+        let mut total_ants_per_phase = vec![0; cycles].into_boxed_slice();
+        let mut total_pheromone_per_route = vec![0.0; number_of_points].into_boxed_slice();
+
+        /* Get total statistics for whole batch */
+        for stat in stats {
+            total_route_len += stat.average_route_len;
+            total_returns += stat.completed_routes;
+            total_complete_routes += stat.completed as usize;
+
+            let values = zip(&stat.pheromone_strengths, stat.pheromone_per_route());
+            let totals = zip(&mut total_pheromone_strengths, &mut total_pheromone_per_route);
+            for ((total_strength, total_avg_strength), (strength, avg_strength)) in zip(totals, values) {
+                *total_strength += strength;
+                *total_avg_strength += avg_strength;
+                }
+
+            for (total_ants, &ants) in zip(&mut total_ants_per_phase, &stat.ants_per_phase) {
+                *total_ants += ants;
+                }
+            }
+
+        /* Average out the totals */
+        for strength in &mut total_pheromone_strengths {
+            *strength /= batch;
+            }
+        for avg_strength in &mut total_pheromone_per_route {
+            *avg_strength /= batch;
+            }
+        let avg_ants_per_phase = total_ants_per_phase.into_iter()
+            .map(|ants| (ants as f64) / batch)
+            .collect();
+
+        /* Create averaged stats */
+        Self {
+            batch_size,
+            total_complete_routes,
+            avg_route_len: total_route_len / batch,
+            avg_completed_routes: total_returns / batch,
+            avg_pheromone_strengths: total_pheromone_strengths,
+            avg_pheromone_per_route: total_pheromone_per_route,
+            avg_ants_per_phase
+            }
         }
     }

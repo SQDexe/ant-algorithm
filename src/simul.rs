@@ -1,36 +1,24 @@
 use {
-    anyhow::Result as DynResult,
     rustc_hash::FxBuildHasher,
     serde_json::{
-        from_str as from_json,
-        to_string_pretty as to_json
+        from_reader,
+        to_writer_pretty
         },
-    sqds_tools::{
-        select,
-        batch_assert,
-        ShowSlice
-        },
+    sqds_tools::ShowSlice,
     std::{
         collections::{
             HashMap,
-            HashSet
+            HashSet,
+            hash_map::Values
             },
         fs::File,
-        io::{
-            Read,
-            Write
-            },
         path::Path
         },
-    core::iter::zip,
     crate::{
+        info,
         anthill::AntHill,
-        args::Args,
-        consts::{
-            bias,
-            limits::*,
-            default::GRID
-            },
+        consts::limits::*,
+        error::*,
         tech::*,
         utils::Point,
         world::World
@@ -44,14 +32,12 @@ use {
 pub struct Simulator {
     /** Whether logging should happen. */
     logs: bool,
-    /** Whether the simulation runs once. */
-    singleton: bool,
     /** Number or repetitions. */
     batch_size: usize,
     /** Simulation's configuration. */
     config: Config,
     /** Amount of food to add on corresponding cycle, and point. */
-    actions: HashMap<usize, Box<[(char, u32)]>, FxBuildHasher>,
+    actions: HashMap<usize, Box<[(Id, u32)]>, FxBuildHasher>,
     /** The colony of ants. */
     ant_hill: AntHill,
     /** World space object. */
@@ -62,105 +48,32 @@ pub struct Simulator {
 
 impl Simulator {
     /** Constructor. */
-    pub fn new(args: Args) -> Self {
-        /* Unpack arguments */
-        let Args {
-            pheromone,
-            rate, returns,
-            select, preference, metric,
-            dispersion,
-            seed,
-            .. } = args;
-
-        /* Cast arguments to acceptable tpyes */
-        let (cycles, ants, decision, batch) = (
-            args.cycles as usize,
-            args.ants as usize,
-            args.decision as usize,
-            args.batch as usize
-            );
+    pub fn new(config: Config, disjoint_config: DisjointConfig) -> Result<Self, AssertionError> {
+        /* Unpack config */
+        let Config { cycles, ref ants, .. } = config;
+        let DisjointConfig { no_logging, batch_size, grid, actions } = disjoint_config;
 
         /* Preproces arguments */
-        let (factor, grid, actions) = (
-            args.factor.unwrap_or(bias::UNKOWN),
-            args.grid.unwrap_or(Vec::from(GRID)),
-            args.actions.unwrap_or_default()
-            );
         let num_of_points = grid.len();
-        /* SAFETY: get is safe, because the points will never be empty */
-        let anthill = unsafe {
-            grid.get_unchecked(0)
-            };
+        let anthill = grid.first()
+            .expect("The grid should always have first point");
 
         /* Build actions map */
-        let actions: HashMap<_, _, _> = {
-            let mut tmp: HashMap<_, Vec<_>, _> = HashMap::with_capacity_and_hasher(cycles, FxBuildHasher);
+        let actions = Self::actions_into_hashmap(actions, cycles);        
 
-            /* Fill the temporary map */
-            for Action(cycle, id, amount) in actions {
-                tmp.entry(cycle)
-                    .or_default()
-                    .push((id, amount))
-                }
+        /* Assert some conditions to avoid unnecessary errors */
+        let grid_values = (grid.as_slice(), anthill, num_of_points);
+        Self::assert(&config, grid_values, actions.values())?;
 
-            /* Rebuild into final file */
-            tmp.into_iter()
-                .map(|(cycle, action)| (cycle, action.into_boxed_slice()))
-                .collect()
-            };
-        
-
-        /* Assert some conditions to avoid unnecessary errors */ {
-            /* Prepare variables */
-            let (point_ids, point_pos): (HashSet<_, FxBuildHasher>, HashSet<_, FxBuildHasher>) = grid.iter()
-                .map(|Point { id, x, y, .. }| (id, (x, y)))
-                .unzip();
-            let actions_ids = actions.values()
-                .flatten()
-                .map(|&(chr, _)| chr)
-                .collect();
-
-            /* Prepare assertion variables */
-            let points_have_unique_ids = point_ids.len() == num_of_points;
-            let points_have_unique_postions = point_pos.len() == num_of_points;
-            let correct_num_of_decision_points = (1 ..= num_of_points).contains(&decision);
-            let positive_nonzero_pheromone_strength = PHERO_RANGE.contains(&pheromone);
-            let unset_or_correct_dispersion_factor = (dispersion.is_none() && factor.is_nan()) ||
-                dispersion.is_some_and(|dis_mode| dis_mode.is_factor_valid(&factor));
-            let valid_action_ids = point_ids.is_superset(&actions_ids);
-            let anthill_has_no_food = anthill.is_empty() &&
-                ! actions_ids.contains(&anthill.id);
-
-            /* Assert! */
-            batch_assert!(
-                points_have_unique_ids,
-                points_have_unique_postions,
-                correct_num_of_decision_points,
-                positive_nonzero_pheromone_strength,
-                unset_or_correct_dispersion_factor,
-                valid_action_ids,
-                anthill_has_no_food
-                );
-            }
-
-        /* Check the batch size */
-        let singleton = batch == 1;
+        /* Check whether the simulation runs once */
+        let singleton = batch_size == 1;
         
         /* Set whether to log information */
-        let logs = if args.quiet || (PRINTABLE_ANTS_RANGE.contains(&ants) && singleton) {
-            ! args.quiet
+        let logs = if no_logging || (PRINTABLE_ANTS_RANGE.contains(ants) && singleton) {
+            ! no_logging
         } else {
-            eprintln!("[INFO]: Logging hidden");
+            info!("Logging hidden");
             false
-            };
-
-        /* Create configuration container */
-        let config = Config {
-            cycles, ants, pheromone, decision,
-            rate, returns,
-            select, preference, metric,
-            dispersion, factor,
-            seed
             };
 
         /* Create Anthill object */
@@ -170,24 +83,74 @@ impl Simulator {
         let world = World::new(grid, &config);
 
         /* Create Simulator object */
-        Self {
+        Ok(Self {
             logs,
-            singleton,
-            batch_size: batch,
+            batch_size,
             config,
             actions,
-            stats: Vec::with_capacity(batch),         
+            stats: Vec::with_capacity(batch_size),         
             ant_hill,
             world
+            })
+        }
+
+    /** Static, helper function for asserting simulation's conditions. */
+    fn assert(config: &Config, grid_values: (&[Point], &Point, usize), actions: Values<'_, usize, Box<[(Id, u32)]>>) -> Result<(), AssertionError> {
+        /* Unpack config */
+        let Config { pheromone, decision, dispersion, factor, .. } = config;
+        let (grid, anthill, num_of_points) = grid_values;
+
+        /* Prepare variables */
+        let (point_ids, point_pos): (HashSet<_, FxBuildHasher>, HashSet<_, FxBuildHasher>) = grid.into_iter()
+            .map(|Point { id, x, y, .. }| (id, (x, y)))
+            .unzip();
+        let actions_ids = actions.flatten()
+            .map(|&(id, _)| id)
+            .collect();
+
+        /* Assert! */
+        if point_ids.len() != num_of_points
+            { return Err(AssertionError::NonUniquePointIds); }
+        if point_pos.len() != num_of_points
+            { return Err(AssertionError::NonUniquePointPositions); }
+        if ! (1 ..= num_of_points).contains(decision)
+            { return Err(AssertionError::InvalidDecisionPoints); }
+        if ! PHERO_RANGE.contains(pheromone)
+            { return Err(AssertionError::PheromoneOutsideOfRange); }
+        if dispersion.is_some_and(|mode| ! mode.is_factor_valid(factor))
+            { return Err(AssertionError::InvalidDispersionCoefficient); }
+        if ! point_ids.is_superset(&actions_ids)
+            { return Err(AssertionError::NonOverlappingActionIds); }
+        if ! anthill.is_empty() && actions_ids.contains(&anthill.id) 
+            { return Err(AssertionError::NonEmptyAnthill); }
+
+        Ok(())
+        }
+
+    /** Takes an iterator of actions, and crates a hash map from it */
+    fn actions_into_hashmap<I>(actions: I, cycles: usize) -> HashMap<usize, Box<[(Id, u32)]>, FxBuildHasher>
+    where I: IntoIterator<Item = Action> {
+        let mut tmp: HashMap<_, Vec<_>, _> = HashMap::with_capacity_and_hasher(cycles, FxBuildHasher);
+
+        /* Fill the temporary map */
+        for Action(cycle, id, amount) in actions {
+            tmp.entry(cycle)
+                .or_default()
+                .push((id, amount))
             }
+
+        /* Rebuild into final file */
+        tmp.into_iter()
+            .map(|(cycle, action)| (cycle, action.into_boxed_slice()))
+            .collect()
         }
 
     /** Run the simulation. */
-    pub fn simulate(&mut self) {
+    pub fn simulate(&mut self) -> Result<(), NoFoodsourceError> {
         /* Simulate number of times */
         for _ in 0 .. self.batch_size {
             /* Container for statistics */
-            let mut stats = Stats::default();
+            let mut ants_per_phase = Vec::with_capacity(self.config.cycles);
 
             /* Print information, if applicable */
             if self.logs {
@@ -200,7 +163,7 @@ impl Simulator {
             /* Begin the simulation */
             for phase in 0 .. self.config.cycles {
                 /* Make simulation step */
-                self.ant_hill.action(&mut self.world);
+                self.ant_hill.action(&mut self.world)?;
 
                 /* Disperse pheromones */
                 self.world.disperse_pheromons();
@@ -213,7 +176,7 @@ impl Simulator {
                     }
 
                 /* Gather statistics */
-                stats.ants_per_phase.push(self.ant_hill.satiated_ants_count());
+                ants_per_phase.push(self.ant_hill.satiated_ants_count());
 
                 /* Print information, if applicable */
                 if self.logs {
@@ -225,10 +188,13 @@ impl Simulator {
                 }
 
             /* Gather final statistics */
-            stats.completed = self.ant_hill.has_all_ants_satiated();
-            stats.pheromone_strengths = self.world.pheromones_per_point();
-            stats.average_route_len = self.ant_hill.average_route_length();
-            stats.average_returns = self.ant_hill.average_routes_count();
+            let stats = Stats {
+                completed: self.ant_hill.has_all_ants_satiated(),
+                pheromone_strengths: self.world.pheromones_per_point(),
+                average_route_len: self.ant_hill.average_route_length(),
+                ants_per_phase: ants_per_phase.into_boxed_slice(),
+                completed_routes: self.ant_hill.average_routes_count()
+                };
 
             /* Add statistics */
             self.stats.push(stats);
@@ -237,15 +203,12 @@ impl Simulator {
             self.ant_hill.reset();
             self.world.reset();
             }
+
+        Ok(())
         }
     
     /** Show operation for singular simulation. */
-    fn show_one(&self) {
-        /* SAFETY: get is safe, because the points will never be empty */
-        let stats = unsafe {
-            self.stats.get_unchecked(0)
-            };
-
+    fn show_one(stats: &Stats) {
         println!(
 "o> --------- STATISTICS --------- <o
 |        all reached goal: {}
@@ -259,22 +222,13 @@ o> ------------------------------ <o",
             stats.pheromone_strengths.show_slice(),
             stats.average_route_len,
             stats.ants_per_phase.show_slice(),
-            stats.average_returns,
+            stats.completed_routes,
             stats.pheromone_per_route().show_slice()
             );
         }
     
     /** Show operation for averages of a batch simulation. */
-    fn show_avg(&self) {
-        let (
-            times,
-            pheromone_strengths,
-            route_len,
-            ants_per_phase,
-            returns,
-            pheromone_per_route
-            ) = self.average_stats();
-
+    fn show_avg(avg_stats: AveragedStats) {
         println!(
 "o> ------ AVG STATS OF {:>3} ------ <o
 |  total completed routes: {}
@@ -284,55 +238,14 @@ o> ------------------------------ <o",
 |  average routes per ant: {}
 |    pheromones per route: {}
 o> ------------------------------ <o",
-            self.batch_size,
-            times,
-            pheromone_strengths.show_slice(),
-            route_len,
-            ants_per_phase.show_slice(),
-            returns,
-            pheromone_per_route.show_slice()
+            avg_stats.batch_size,
+            avg_stats.total_complete_routes,
+            avg_stats.avg_pheromone_strengths.show_slice(),
+            avg_stats.avg_route_len,
+            avg_stats.avg_ants_per_phase.show_slice(),
+            avg_stats.avg_completed_routes,
+            avg_stats.avg_pheromone_per_route.show_slice()
             );
-        }
-
-    /** `average_stats` getter */
-    fn average_stats(&self) -> (usize, Vec<f64>, f64, Vec<f64>, f64, Vec<f64>) {
-        let number_of_points = self.world.number_of_points();
-        let batch = self.batch_size as f64;
-
-        /* Set empty containers */
-        let mut total = Stats::default();
-        let mut total_complete_routes = 0;
-        total.pheromone_strengths = vec![0.0; number_of_points];
-        total.ants_per_phase = vec![0; self.config.cycles];
-        let mut total_pheromone_per_route = vec![0.0; number_of_points];
-  
-        /* Get total statistics for whole batch */
-        for stat in &self.stats {
-            total.average_route_len += stat.average_route_len;
-            total.average_returns += stat.average_returns;
-            total_complete_routes += stat.completed as usize;
-  
-            for (i, (strength, avg_strength)) in zip(&stat.pheromone_strengths, stat.pheromone_per_route())
-            .enumerate() {
-                total.pheromone_strengths[i] += strength;
-                total_pheromone_per_route[i] += avg_strength;
-                }
-            for (i, ants) in stat.ants_per_phase.iter().enumerate() {
-                total.ants_per_phase[i] += ants;
-                }
-            }
-  
-        /* Average out the totals */
-        let avg_route_len = total.average_route_len / batch;
-        let avg_returns = total.average_returns / batch;
-        let (avg_pheromone_strengths, avg_pheromone_per_route) = zip(&total.pheromone_strengths, &total_pheromone_per_route)
-            .map(|(n, m)| (n / batch, m / batch))
-            .unzip();
-        let avg_ants_per_phase = total.ants_per_phase.iter()
-            .map(|&n| n as f64 / batch)
-            .collect();
-        
-        ( total_complete_routes, avg_pheromone_strengths, avg_route_len, avg_ants_per_phase, avg_returns, avg_pheromone_per_route )
         }
 
     /** Show the simulation's summary. */
@@ -344,38 +257,49 @@ o> ------------------------------ <o",
         self.config.show();
 
         /* Show simulation's statistics */
-        select!(self.singleton,
-            self.show_one(),
-            self.show_avg()
-            )
+        match self.stats.as_slice() {
+            [single] => Self::show_one(single),
+            many => {
+                let avg_stats = AveragedStats::new(
+                    many,
+                    self.config.cycles,
+                    self.world.number_of_points(),
+                    self.batch_size
+                    );
+
+                Self::show_avg(avg_stats);
+                },
+            }
         }
 
     /** Write statistics to file. */
-    pub fn write_to_file(&mut self, absolute_path: &Path) -> DynResult<()> {
-        /* EMpty statistics container */
+    pub fn write_to_file(&mut self, path: &Path) -> Result<(), SaveError> {
+        /* Empty statistics container */
         let mut data = Vec::with_capacity(self.batch_size);
         
         /* If file exists, pull it's contents */
-        if absolute_path.exists() {
+        if path.exists() {
             /* File reader handle */
-            let mut file = File::open(&absolute_path)?;
+            let file = File::open(path)?;
 
-            /* Fill the content buffer */
-            let mut contents = String::new();
-            file.read_to_string(&mut contents)?;
+            /* Extract current contents */
+            let contents: Box<[_]> = from_reader(file)?;
 
             /* Push old statistics from the file */
-            data.extend(from_json::<Box<[_]>>(&contents)?);
+            data.extend(contents);
             }
         
         /* File writer handle */
-        let mut file = File::create(&absolute_path)?;
+        let file = File::create(path)?;
 
         /* Push current statistics */
-        data.append(&mut self.stats);
+        data.extend_from_slice(&self.stats);
 
         /* Try writing statistics to the file */
-        file.write_all(&to_json(&data)?.into_bytes())?;
+        to_writer_pretty(file, &data)?;
+
+        /* Write information */
+        info!("Statistics saved in '{}'", path.display());
 
         Ok(())
         }

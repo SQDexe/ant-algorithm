@@ -7,7 +7,6 @@ use {
             HashSet,
             HashMap
             },
-        process::exit
         },
     core::{
         fmt::Write,
@@ -21,6 +20,7 @@ use {
             bias,
             limits::MAX_POINTS
             },
+        error::NoFoodsourceError,
         tech::*,
         utils::*
         }
@@ -38,9 +38,9 @@ pub struct World {
     /** Auxils container. */
     auxils: ArrayVec<Auxil, MAX_POINTS>,
     /** Current points holding any food. */
-    foodsource_ids: HashSet<char, FxBuildHasher>,
+    foodsource_ids: HashSet<Id, FxBuildHasher>,
     /** Initial points holding any food. */
-    initial_foodsources: HashMap<char, u32, FxBuildHasher>,
+    initial_foodsources: HashMap<Id, u32, FxBuildHasher>,
     /** Number of decision points. */
     number_of_decision_points: usize,
     /** Method of acquiring new index. */
@@ -102,15 +102,11 @@ impl World {
         }
 
     /** Calculate new preference values for the points. */
-    fn calculate_preference(&mut self, visited: &str) {
+    fn calculate_preference(&mut self, visited: &Route) {
         /* Get current postion's id, and coordinates */
         let (current_id, current_x, current_y) = {
-            /* SAFETY: unwrap is safe, because the route will never be empty */
-            let id = unsafe {
-                visited.chars()
-                    .last()
-                    .unwrap_unchecked()
-                };
+            let id = visited.last()
+                .expect("Route should never be empty");
             
             /* Retrive point data */
             let point = self.find_point(id);
@@ -119,7 +115,7 @@ impl World {
 
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in zip(&mut self.auxils, &self.points) {
-            let viable = ! visited.contains(auxil.id) ||
+            let viable = ! visited.contains(&auxil.id) ||
                 self.foodsource_ids.contains(&current_id);
 
             /* If valiable, assign new ratio, otherwise, assign lowest value */
@@ -131,14 +127,13 @@ impl World {
         }
 
     /** Create new position according to passed arguments. */
-    pub fn get_new_position(&mut self, visited: &str) -> char {
+    pub fn get_new_position(&mut self, visited: &Route) -> Result<Id, NoFoodsourceError> {
         /* Clear the helper array */
         self.reset_auxils();
         
         /* Safety check - stop the simulation if true */
         if self.foodsource_ids.is_empty() {
-            eprintln!("[ERROR]: A problem occured while trying to find foodsources - simulation stopped");
-            exit(1);
+            return Err(NoFoodsourceError);
             }
 
         /* Preference calculation */
@@ -148,36 +143,33 @@ impl World {
         self.sort_auxils();
 
         /* Select only auxils from the range */
-        /* SAFETY: Number of decision points is always within the number of points, checked during setup */
-        let auxils = unsafe {
-            self.auxils.get_unchecked(.. self.number_of_decision_points)
-            };
+        let auxils = self.auxils.get(.. self.number_of_decision_points)
+            .expect("Number of decision points should always be within range of auxils");
 
         /* New position */
         let choice = loop {
             /* Get new position index */
             let index = self.selection_method.calculate(self.number_of_decision_points, &auxils);
 
-            /* SAFETY: Returned index will always be in range */
-            let auxil = unsafe {
-                self.auxils.get_unchecked(index)
-                };
+            /* Get the element at the position */
+            let auxil = self.auxils.get(index)
+                .expect("Returned index should always be within range of auxils");
 
             /* Get new guesses, until unvisited is found */
-            if ! visited.contains(auxil.id) {
+            if ! visited.contains(&auxil.id) {
                 break auxil;
                 }
             };
         
         /* Return id of new position */
-        choice.id
+        Ok(choice.id)
         }
 
     /** Cover the route with pheromones. */
-    pub fn cover_route(&mut self, visited: &str, exclude: &[char], pheromone: f64) {
+    pub fn cover_route(&mut self, visited: &Route, exclude: &[Id], pheromone: f64) {
         let iter = self.points.iter_mut()
             .filter(|point|
-                visited.contains(point.id) &&
+                visited.contains(&point.id) &&
                 ! exclude.contains(&point.id)
                 );
         for point in iter {
@@ -194,18 +186,15 @@ impl World {
             }
         }
 
-    fn find_point(&mut self, position_id: char) -> &mut Point {
-        /* SAFETY: unwrap is safe, because the point ids are checked during the setup */
-        unsafe {
-            /* Try finding the point */
-            self.points.iter_mut()
-                .find(|point| point.id == position_id)
-                .unwrap_unchecked()
-            }
+    /** Find the point with given ID. */
+    fn find_point(&mut self, position_id: Id) -> &mut Point {
+        self.points.iter_mut()
+            .find(|point| point.id == position_id)
+            .expect("Passed ID should always belong to some existing point")
         }
 
     /** Set amount of food at given point. */
-    pub fn set_foodsource(&mut self, position_id: char, amount: u32) {
+    pub fn set_foodsource(&mut self, position_id: Id, amount: u32) {
         let point = self.find_point(position_id);
             
         /* Assign the amount, and add to foodsource list */
@@ -214,7 +203,7 @@ impl World {
         }
 
     /** Decrease food at given point. */
-    pub fn consume_foodsource(&mut self, position_id: char, amount: u32) {
+    pub fn consume_foodsource(&mut self, position_id: Id, amount: u32) {
         let point = self.find_point(position_id);
 
         /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
@@ -225,7 +214,7 @@ impl World {
         }
 
     /** Check whether the point is a foodsource. */
-    pub fn is_foodsource(&self, position_id: &char) -> bool { 
+    pub fn is_foodsource(&self, position_id: &Id) -> bool { 
         self.foodsource_ids.contains(position_id)
         }
 
@@ -278,12 +267,12 @@ impl World {
         println!("o> -------------- <o");
         }
 
-    /** `points`' length getter.` */
+    /** `points`' length getter. */
     #[inline]
     pub const fn number_of_points(&self) -> usize
         { self.num_of_points }
     /** `pheromones_per_point` getter. */
-    pub fn pheromones_per_point(&self) -> Vec<f64> {
+    pub fn pheromones_per_point(&self) -> Box<[f64]> {
         self.points.iter()
             .map(|point| point.pheromone)
             .collect()

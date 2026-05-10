@@ -4,7 +4,11 @@ use {
         iter::repeat_with
         },
     crate::{
-        tech::Config,
+        error::NoFoodsourceError,
+        tech::{
+            Config,
+            Id
+            },
         utils::Ant,
         world::World
         }
@@ -20,7 +24,7 @@ pub struct AntHill {
     /** Container for the ants. */
     ants: Box<[Ant]>,
     /** Anthill's ID. */
-    anthill_id: char,
+    anthill_id: Id,
     /** Amount of pheromones laid out by ants. */
     pheromone: f64,
     /** Amount of food ants cosume. */
@@ -31,7 +35,7 @@ pub struct AntHill {
 
 impl AntHill {
     /** Constructor. */
-    pub fn new(anthill_id: char, config: &Config, num_of_points: usize) -> Self {
+    pub fn new(anthill_id: Id, config: &Config, num_of_points: usize) -> Self {
         let ants = repeat_with(|| Ant::new(anthill_id, num_of_points))
             .take(config.ants)
             .collect();
@@ -48,14 +52,14 @@ impl AntHill {
         }
 
     /** Make all unsatiated ants take action. */
-    pub fn action(&mut self, world: &mut World) {
+    pub fn action(&mut self, world: &mut World) -> Result<(), NoFoodsourceError> {
         /* Precalculate condition */
         let do_ants_cosume = self.consume_rate != 0;
 
         /* Iter over unsatiated ants */
         for ant in self.ants.iter_mut().filter(|ant| ! ant.satiated) {
             /* Get new position, and check if it's a foodsource */
-            let new_position = world.get_new_position(&ant.route);
+            let new_position = world.get_new_position(&ant.route)?;
             let food_reached = world.is_foodsource(&new_position);
         
             /* Update current position, and path */
@@ -79,6 +83,8 @@ impl AntHill {
                     }
                 }
             }
+
+        Ok(())
         }
 
     /** Reset all ants. */

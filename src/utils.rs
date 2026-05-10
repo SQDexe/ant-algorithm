@@ -1,11 +1,13 @@
 use {
-    anyhow::{
-        anyhow,
-        Error
-        },
-    arrayvec::ArrayVec,
     core::str::FromStr,
-    crate::consts::limits::GRID_RANGE
+    crate::{
+        consts::limits::GRID_RANGE,
+        error::ParsePointError,
+        tech::{
+            Id,
+            Route
+            }
+        }
     };
 
 
@@ -16,15 +18,15 @@ pub struct Ant {
     /** Check, whether the ant found food. */
     pub satiated: bool,
     /** Ant's current route. */
-    pub route: String,
+    pub route: Route,
     /** Number of routes the ant went through. */
     pub routes_counter: u8
     }
 
 impl Ant {
     /** Constructor. */
-    pub fn new(anthill_id: char, max_length: usize) -> Self {
-        let mut route = String::with_capacity(max_length);
+    pub fn new(anthill_id: Id, max_length: usize) -> Self {
+        let mut route = Route::with_capacity(max_length);
         route.push(anthill_id);
 
         /* Create ant */
@@ -36,14 +38,14 @@ impl Ant {
         }
 
     /** Reset the postion, route, and unmark the ant. */
-    pub fn return_to(&mut self, destination: char) {
+    pub fn return_to(&mut self, destination: Id) {
         self.satiated = false;
         self.route.clear();
         self.route.push(destination);
         }
 
     /** Reset the position, and the counter. */
-    pub fn reset(&mut self, destination: char) {
+    pub fn reset(&mut self, destination: Id) {
         self.return_to(destination);
         self.routes_counter = 0;
         }
@@ -53,7 +55,7 @@ impl Ant {
 #[derive(Debug, Clone, Default)]
 pub struct Point {
     /** Unique point ID. */
-    pub id: char,
+    pub id: Id,
     /** Point's x coordinate. */
     pub x: i16,
     /** Point's y coordinate. */
@@ -67,11 +69,12 @@ pub struct Point {
 impl Point {
     /** Constructor. */
     #[inline]
-    pub const fn new(id: char, x: i16, y: i16, food: u32) -> Self {
+    pub const fn new(id: Id, x: i16, y: i16, food: u32) -> Self {
         Self { id, x, y, food, pheromone: 0.0 }
         }
 
     /** `food` checker. */
+    #[inline]
     pub const fn is_empty(&self) -> bool {
         self.food == 0
         }
@@ -79,34 +82,46 @@ impl Point {
 
 /** **Technical part** - trait implementation for input parsing. */
 impl FromStr for Point {
-    type Err = Error;
+    type Err = ParsePointError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         /* Collect split text elements */
-        let parts: ArrayVec<_, 4> = s.splitn(4, ',').collect();
+        let mut parts = s.splitn(4, ',');
 
-        /* Try destructing, otherwise throw error */
-        let (str_id, str_x, str_y, food) = match parts.as_slice() {
-            [id, x, y, food] => (id, x, y, food.parse()?),
-            [id, x, y] => (id, x, y, 0),
-            _ => return Err(anyhow!("Incorrect Point data format"))
+        /* Try retriving elements from the iterator */
+        let str_elements = [parts.next(), parts.next(), parts.next()];
+        let [Some(str_id), Some(str_x), Some(str_y)] = str_elements else {
+            return Err(ParsePointError::InvalidFormat);
             };
 
+        /* Try parsing main elements */
         let (id, x, y) = (
-            str_id.parse()?,
-            str_x.parse()?,
-            str_y.parse()?
+            str_id.parse()
+                .map_err(|_| ParsePointError::FailedParseId)?,
+            str_x.parse()
+                .map_err(|_| ParsePointError::FailedParseXCoord)?,
+            str_y.parse()
+                .map_err(|_| ParsePointError::FailedParseYCoord)?
             );
 
+        /* Try parsing food elements */
+        let food = parts.next()
+            .map(|str_food| str_food.parse())
+            .transpose()
+            .map_err(|_| ParsePointError::FailedParseFoodAmount)?
+            .unwrap_or(0);
+
+        /* Check whether x is within allowed range */
         if ! GRID_RANGE.contains(&x) {
-            return Err(anyhow!("Point's x coordiante outside of range"));
+            return Err(ParsePointError::XCoordOutOfRange);
             }
 
+        /* Check whether y is within allowed range */
         if ! GRID_RANGE.contains(&y) {
-            return Err(anyhow!("Point's y coordiante outside of range"));
+            return Err(ParsePointError::YCoordOutOfRange);
             }
 
-        /* Try parsing, and ouptut */
+        /* Create point */
         Ok(Self::new(id, x, y, food))
         }
     }
@@ -115,7 +130,7 @@ impl FromStr for Point {
 #[derive(Debug, Clone, Default)]
 pub struct Auxil {
     /** ID of refrenced point. */
-    pub id: char,
+    pub id: Id,
     /** Calculations output. */
     pub ratio: f64
     }
