@@ -4,7 +4,7 @@ use {
         iter::repeat_with
         },
     crate::{
-        error::NoFoodsourceError,
+        error::NoFoodSourceError,
         tech::{
             Config,
             Id
@@ -52,28 +52,28 @@ impl AntHill {
         }
 
     /** Make all unsatiated ants take action. */
-    pub fn action(&mut self, world: &mut World) -> Result<(), NoFoodsourceError> {
+    pub fn action(&mut self, world: &mut World) -> Result<(), NoFoodSourceError> {
         /* Precalculate condition */
         let do_ants_cosume = self.consume_rate != 0;
 
         /* Iter over unsatiated ants */
         for ant in self.ants.iter_mut().filter(|ant| ! ant.satiated) {
-            /* Get new position, and check if it's a foodsource */
+            /* Get new position, and check if it's a food source */
             let new_position = world.get_new_position(&ant.route)?;
-            let food_reached = world.is_foodsource(&new_position);
+            let food_reached = world.is_food_source(&new_position);
         
             /* Update current position, and path */
             ant.route.push(new_position);
         
-            /* Actions taken upon reaching a foodsource */
+            /* Actions taken upon reaching a food source */
             if food_reached {
                 /* Mark ant as satiated, and cover the route */
                 ant.satiated = true;
                 world.cover_route(&ant.route, &[self.anthill_id], self.pheromone);
 
-                /* If ants consume, consume the foodsource */
+                /* If ants consume, consume the food source */
                 if do_ants_cosume {
-                    world.consume_foodsource(new_position, self.consume_rate);
+                    world.consume_food_source(new_position, self.consume_rate);
                     }
 
                 /* If ants return, reset position, and increment the counter */

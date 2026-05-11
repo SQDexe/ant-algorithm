@@ -146,7 +146,7 @@ impl Simulator {
         }
 
     /** Run the simulation. */
-    pub fn simulate(&mut self) -> Result<(), NoFoodsourceError> {
+    pub fn simulate(&mut self) -> Result<(), NoFoodSourceError> {
         /* Simulate number of times */
         for _ in 0 .. self.batch_size {
             /* Container for statistics */
@@ -171,7 +171,7 @@ impl Simulator {
                 /* Execute actions, if applicable */
                 if let Some(acts) = self.actions.get(&phase) {
                     for &(id, amount) in acts {
-                        self.world.set_foodsource(id, amount);
+                        self.world.set_food_source(id, amount);
                         }
                     }
 

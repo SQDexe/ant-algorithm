@@ -20,7 +20,7 @@ use {
             bias,
             limits::MAX_POINTS
             },
-        error::NoFoodsourceError,
+        error::NoFoodSourceError,
         tech::*,
         utils::*
         }
@@ -38,9 +38,9 @@ pub struct World {
     /** Auxils container. */
     auxils: ArrayVec<Auxil, MAX_POINTS>,
     /** Current points holding any food. */
-    foodsource_ids: HashSet<Id, FxBuildHasher>,
+    food_source_ids: HashSet<Id, FxBuildHasher>,
     /** Initial points holding any food. */
-    initial_foodsources: HashMap<Id, u32, FxBuildHasher>,
+    initial_food_sources: HashMap<Id, u32, FxBuildHasher>,
     /** Number of decision points. */
     number_of_decision_points: usize,
     /** Method of acquiring new index. */
@@ -56,7 +56,7 @@ pub struct World {
 impl World {
     /** Constructor. */
     pub fn new(point_list: Vec<Point>, config: &Config) -> Self {
-        let (initial_foodsources, foodsource_ids): (HashMap<_, _, _>, HashSet<_, _>) = point_list.iter()
+        let (initial_food_sources, food_source_ids): (HashMap<_, _, _>, HashSet<_, _>) = point_list.iter()
             .filter_map(|point|
                 (! point.is_empty())
                     .then_some(((point.id, point.food_amount), point.id))
@@ -77,8 +77,8 @@ impl World {
             num_of_points,
             points,
             auxils,
-            foodsource_ids,
-            initial_foodsources,
+            food_source_ids,
+            initial_food_sources,
             number_of_decision_points: config.decision,
             selection_method: config.select,
             preference_method: config.preference,
@@ -116,7 +116,7 @@ impl World {
         /* Calculate preference scores for all the points, visited points get smallest score to avoid getting stuck */
         for (auxil, point) in zip(&mut self.auxils, &self.points) {
             let viable = ! visited.contains(&auxil.id) ||
-                self.foodsource_ids.contains(&current_id);
+                self.food_source_ids.contains(&current_id);
 
             /* If valiable, assign new ratio, otherwise, assign lowest value */
             auxil.ratio = select!(viable,
@@ -127,13 +127,13 @@ impl World {
         }
 
     /** Create new position according to passed arguments. */
-    pub fn get_new_position(&mut self, visited: &Route) -> Result<Id, NoFoodsourceError> {
+    pub fn get_new_position(&mut self, visited: &Route) -> Result<Id, NoFoodSourceError> {
         /* Clear the helper array */
         self.reset_auxils();
         
         /* Safety check - stop the simulation if true */
-        if self.foodsource_ids.is_empty() {
-            return Err(NoFoodsourceError);
+        if self.food_source_ids.is_empty() {
+            return Err(NoFoodSourceError);
             }
 
         /* Preference calculation */
@@ -194,43 +194,43 @@ impl World {
         }
 
     /** Set amount of food at given point. */
-    pub fn set_foodsource(&mut self, position_id: Id, amount: u32) {
+    pub fn set_food_source(&mut self, position_id: Id, amount: u32) {
         let point = self.find_point(position_id);
             
-        /* Assign the amount, and add to foodsource list */
+        /* Assign the amount, and add to food source list */
         point.food_amount = amount;
-        self.foodsource_ids.insert(position_id);
+        self.food_source_ids.insert(position_id);
         }
 
     /** Decrease food at given point. */
-    pub fn consume_foodsource(&mut self, position_id: Id, amount: u32) {
+    pub fn consume_food_source(&mut self, position_id: Id, amount: u32) {
         let point = self.find_point(position_id);
 
-        /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
+        /* Subtract amount from the point, if value goes to zero, remove from food source list */
         point.food_amount = point.food_amount.saturating_sub(amount);
         if point.is_empty() {
-            self.foodsource_ids.remove(&position_id);
+            self.food_source_ids.remove(&position_id);
             }
         }
 
-    /** Check whether the point is a foodsource. */
-    pub fn is_foodsource(&self, position_id: &Id) -> bool { 
-        self.foodsource_ids.contains(position_id)
+    /** Check whether the point is a food source. */
+    pub fn is_food_source(&self, position_id: &Id) -> bool { 
+        self.food_source_ids.contains(position_id)
         }
 
     /** Reset points to original state - food, and pheromones. */
     pub fn reset(&mut self) {
-        /* Clear available foodsources */
-        self.foodsource_ids.clear();
+        /* Clear available food sources */
+        self.food_source_ids.clear();
 
         /* Reset points */
         for point in &mut self.points {
             point.pheromone = 0.0;
 
             /* Additional reset if point had food initally */
-            if let Some(&initial_value) = self.initial_foodsources.get(&point.id) {
+            if let Some(&initial_value) = self.initial_food_sources.get(&point.id) {
                 point.food_amount = initial_value;
-                self.foodsource_ids.insert(point.id);
+                self.food_source_ids.insert(point.id);
                 } 
             }
         }

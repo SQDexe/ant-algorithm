@@ -57,7 +57,7 @@ pub enum RuntimeError {
     Assert(#[from] AssertionError),
     /** Error caused by a shortage of food sources occured during simulation. */
     #[error(transparent)]
-    NoFoodsource(#[from] NoFoodsourceError),
+    NoFoodSource(#[from] NoFoodSourceError),
     /** Error caused by trying to save statistics to file. */
     #[error("An error occured while trying to save: {0}")]
     File(#[from] SaveError)
@@ -92,7 +92,7 @@ pub enum AssertionError {
 /** **Technical part** - type to represent a possible food source shortage. */
 #[derive(Debug, Error)]
 #[error("Available food sources ran out")]
-pub struct NoFoodsourceError;
+pub struct NoFoodSourceError;
 
 /** **Technical part** - type to represent a possible statistics' saving errors. */
 #[derive(Debug, Error)]
