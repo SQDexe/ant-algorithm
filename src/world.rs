@@ -59,7 +59,7 @@ impl World {
         let (initial_foodsources, foodsource_ids): (HashMap<_, _, _>, HashSet<_, _>) = point_list.iter()
             .filter_map(|point|
                 (! point.is_empty())
-                    .then_some(((point.id, point.food), point.id))
+                    .then_some(((point.id, point.food_amount), point.id))
                 )
             .unzip();
 
@@ -198,7 +198,7 @@ impl World {
         let point = self.find_point(position_id);
             
         /* Assign the amount, and add to foodsource list */
-        point.food = amount;
+        point.food_amount = amount;
         self.foodsource_ids.insert(position_id);
         }
 
@@ -207,7 +207,7 @@ impl World {
         let point = self.find_point(position_id);
 
         /* Subtract amount from the point, if value goes to zero, remove from foodsource list */
-        point.food = point.food.saturating_sub(amount);
+        point.food_amount = point.food_amount.saturating_sub(amount);
         if point.is_empty() {
             self.foodsource_ids.remove(&position_id);
             }
@@ -229,7 +229,7 @@ impl World {
 
             /* Additional reset if point had food initally */
             if let Some(&initial_value) = self.initial_foodsources.get(&point.id) {
-                point.food = initial_value;
+                point.food_amount = initial_value;
                 self.foodsource_ids.insert(point.id);
                 } 
             }
@@ -241,7 +241,7 @@ impl World {
         let mut tmp = String::with_capacity(self.points.len() * 47);
 
         /* Fill the string */
-        for Point { id, food, pheromone, .. } in &self.points {
+        for Point { id, food_amount: food, pheromone, .. } in &self.points {
             _ = writeln!(tmp, "| # {id}: {food:>4} - {pheromone}");
             }
 

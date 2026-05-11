@@ -63,20 +63,20 @@ pub struct Point {
     /** Point's current amount of pheromones. */
     pub pheromone: f64,
     /** Point's current amount of food. */
-    pub food: u32
+    pub food_amount: u32
     }
 
 impl Point {
     /** Constructor. */
     #[inline]
-    pub const fn new(id: Id, x: i16, y: i16, food: u32) -> Self {
-        Self { id, x, y, food, pheromone: 0.0 }
+    pub const fn new(id: Id, x: i16, y: i16, food_amount: u32) -> Self {
+        Self { id, x, y, food_amount, pheromone: 0.0 }
         }
 
     /** `food` checker. */
     #[inline]
     pub const fn is_empty(&self) -> bool {
-        self.food == 0
+        self.food_amount == 0
         }
     }
 
@@ -202,19 +202,19 @@ pub mod preference {
         { point.pheromone + bias::NEUTRAL }
     /** Point prefrence calculation for food. */
     pub const fn food(point: &Point) -> f64
-        { point.food as f64 + bias::NEUTRAL }
+        { point.food_amount as f64 + bias::NEUTRAL }
     /** Point prefrence calculation for pheromones, and distance. */
     pub fn phero_dist(point: &Point, x: i16, y: i16, metric: Metric) -> f64
         { (point.pheromone + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
     /** Point prefrence calculation for food, and distance. */
     pub fn food_dist(point: &Point, x: i16, y: i16, metric: Metric) -> f64
-        { (point.food as f64 + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
+        { (point.food_amount as f64 + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
     /** Point prefrence calculation for pheromones, and food. */
     pub const fn phero_food(point: &Point) -> f64
-        { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) }
+        { (point.pheromone + bias::NEUTRAL) * (point.food_amount as f64 + bias::NEUTRAL) }
     /** Point prefrence calculation for pheromones, food, and distance. */
     pub fn phero_food_dist(point: &Point, x: i16, y: i16, metric: Metric) -> f64
-        { (point.pheromone + bias::NEUTRAL) * (point.food as f64 + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
+        { (point.pheromone + bias::NEUTRAL) * (point.food_amount as f64 + bias::NEUTRAL) / metric.calculate(x, y, point.x, point.y) }
     }
 
 /** Functions for calculating new indices. */
