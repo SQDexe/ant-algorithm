@@ -103,7 +103,7 @@ impl World {
 
     /** Calculate new preference values for the points. */
     fn calculate_preference(&mut self, visited: &Route) {
-        /* Get current postion's id, and coordinates */
+        /* Get current postion's ID, and coordinates */
         let (current_id, current_x, current_y) = {
             let id = visited.last()
                 .expect("Route should never be empty");
@@ -161,7 +161,7 @@ impl World {
                 }
             };
         
-        /* Return id of new position */
+        /* Return ID of new position */
         Ok(choice.id)
         }
 

@@ -105,26 +105,26 @@ impl Route {
         self.inner.len()
         }
 
-    /** Checks whether the route contains the Id. */
+    /** Checks whether the route contains the ID. */
     pub fn contains(&self, id: &Id) -> bool {
         self.inner.contains(id.get())
         }
 
-    /** Get the first Id in the route. */
+    /** Get the first ID in the route. */
     pub fn first(&self) -> Option<Id> {
         self.inner.chars()
             .next()
             .map(Id::new)
         }
 
-    /** Get the last Id in the route. */
+    /** Get the last ID in the route. */
     pub fn last(&self) -> Option<Id> {
         self.inner.chars()
             .last()
             .map(Id::new)
         }
 
-    /** Push new Id to the route. */
+    /** Push new ID to the route. */
     pub fn push(&mut self, id: Id) {
         self.inner.push(id.get());
         }
