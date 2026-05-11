@@ -1,6 +1,4 @@
-#![allow(unused)]
-
-
+#![allow(dead_code)]
 
 /** Default simulation settings. */
 pub mod default {
