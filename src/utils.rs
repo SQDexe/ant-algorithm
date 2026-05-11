@@ -69,7 +69,13 @@ pub struct Point {
 impl Point {
     /** Constructor. */
     #[inline]
-    pub const fn new(id: Id, x: i16, y: i16, food_amount: u32) -> Self {
+    pub const fn new(id: Id, x: i16, y: i16) -> Self {
+        Self::with_food(id, x, y, 0)
+        }
+
+    /** Constructor with food. */
+    #[inline]
+    pub const fn with_food(id: Id, x: i16, y: i16, food_amount: u32) -> Self {
         Self { id, x, y, food_amount, pheromone: 0.0 }
         }
 
@@ -122,7 +128,7 @@ impl FromStr for Point {
             }
 
         /* Create point */
-        Ok(Self::new(id, x, y, food))
+        Ok(Self::with_food(id, x, y, food))
         }
     }
 

@@ -11,13 +11,13 @@ pub mod default {
 
     /** Default world grid. */
     pub const GRID: [Point; 7] = [
-        Point::new(Id::new('a'),  6, 1,  0),
-        Point::new(Id::new('b'), 13, 1,  0),
-        Point::new(Id::new('c'),  4, 3,  0),
-        Point::new(Id::new('d'),  4, 5,  0),
-        Point::new(Id::new('e'),  8, 5,  0),
-        Point::new(Id::new('f'),  6, 8,  0),
-        Point::new(Id::new('g'), 10, 8, 15)
+        Point::new(Id::new('a'),  6, 1),
+        Point::new(Id::new('b'), 13, 1),
+        Point::new(Id::new('c'),  4, 3),
+        Point::new(Id::new('d'),  4, 5),
+        Point::new(Id::new('e'),  8, 5),
+        Point::new(Id::new('f'),  6, 8),
+        Point::with_food(Id::new('g'), 10, 8, 15)
         ];
     /** Default number of cycles. */
     pub const NUM_OF_CYCLES: u64 = 8;
