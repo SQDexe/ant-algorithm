@@ -263,8 +263,7 @@ o> ------------------------------ <o",
                 let avg_stats = AveragedStats::new(
                     many,
                     self.config.cycles,
-                    self.world.number_of_points(),
-                    self.batch_size
+                    self.world.number_of_points()
                     );
 
                 Self::show_avg(avg_stats);

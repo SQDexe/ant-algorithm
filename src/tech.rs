@@ -417,7 +417,8 @@ pub struct AveragedStats {
 
 impl AveragedStats {
     /** Constructor. */
-    pub fn new(stats: &[Stats], cycles: usize, number_of_points: usize, batch_size: usize) -> Self {
+    pub fn new(stats: &[Stats], cycles: usize, number_of_points: usize) -> Self {
+        let batch_size = stats.len();
         let batch = batch_size as f64;
 
         /* Set empty containers */
