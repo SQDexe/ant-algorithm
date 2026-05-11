@@ -4,7 +4,6 @@ use {
         from_reader,
         to_writer_pretty
         },
-    sqds_tools::ShowSlice,
     std::{
         collections::{
             HashMap,
@@ -188,13 +187,7 @@ impl Simulator {
                 }
 
             /* Gather final statistics */
-            let stats = Stats {
-                completed: self.ant_hill.has_all_ants_satiated(),
-                pheromone_strengths: self.world.pheromones_per_point(),
-                average_route_len: self.ant_hill.average_route_length(),
-                ants_per_phase: ants_per_phase.into_boxed_slice(),
-                completed_routes: self.ant_hill.average_routes_count()
-                };
+            let stats = Stats::new(&self.ant_hill, &self.world, ants_per_phase);
 
             /* Add statistics */
             self.stats.push(stats);
@@ -206,46 +199,19 @@ impl Simulator {
 
         Ok(())
         }
-    
-    /** Show operation for singular simulation. */
-    fn show_one(stats: &Stats) {
-        println!(
-"o> --------- STATISTICS --------- <o
-|        all reached goal: {}
-|    pheromones per point: {}
-|    average route length: {}
-| satiated ants per phase: {}
-|  average routes per ant: {}
-|    pheromones per route: {}
-o> ------------------------------ <o",
-            stats.completed,
-            stats.pheromone_strengths.show_slice(),
-            stats.average_route_len,
-            stats.ants_per_phase.show_slice(),
-            stats.completed_routes,
-            stats.pheromone_per_route().show_slice()
-            );
-        }
-    
-    /** Show operation for averages of a batch simulation. */
-    fn show_avg(avg_stats: AveragedStats) {
-        println!(
-"o> ------ AVG STATS OF {:>3} ------ <o
-|  total completed routes: {}
-|    pheromones per point: {}
-|    average route length: {}
-| satiated ants per phase: {}
-|  average routes per ant: {}
-|    pheromones per route: {}
-o> ------------------------------ <o",
-            avg_stats.batch_size,
-            avg_stats.total_complete_routes,
-            avg_stats.avg_pheromone_strengths.show_slice(),
-            avg_stats.avg_route_len,
-            avg_stats.avg_ants_per_phase.show_slice(),
-            avg_stats.avg_completed_routes,
-            avg_stats.avg_pheromone_per_route.show_slice()
-            );
+
+    /** Show the simulation's statistics based on their number. */
+    pub fn show_stats(&self) {
+        match self.stats.as_slice() {
+            [single] =>
+                single.show(),
+            many => 
+                AveragedStats::new(
+                    self.config.cycles,
+                    self.world.number_of_points(),
+                    many
+                    ).show()
+            }
         }
 
     /** Show the simulation's summary. */
@@ -257,18 +223,7 @@ o> ------------------------------ <o",
         self.config.show();
 
         /* Show simulation's statistics */
-        match self.stats.as_slice() {
-            [single] => Self::show_one(single),
-            many => {
-                let avg_stats = AveragedStats::new(
-                    many,
-                    self.config.cycles,
-                    self.world.number_of_points()
-                    );
-
-                Self::show_avg(avg_stats);
-                },
-            }
+        self.show_stats();
         }
 
     /** Write statistics to file. */

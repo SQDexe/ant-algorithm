@@ -7,7 +7,10 @@ use {
         Deserialize,
         Serialize
         },
-    sqds_tools::ShowOption,
+    sqds_tools::{
+        ShowOption,
+        ShowSlice
+        },
     std::path::PathBuf,
     core::{
         char::ParseCharError,
@@ -21,6 +24,7 @@ use {
         iter::zip,
         },
     crate::{
+        anthill::AntHill,
         consts::limits::{
             DISPERSION_LINEAR_RANGE,
             DISPERSION_EXPONENTIAL_RANGE,
@@ -34,7 +38,8 @@ use {
             distance::*,
             preference::*,
             selection::*
-            }
+            },
+        world::World
         }
     };
 
@@ -376,23 +381,55 @@ pub struct DisjointConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Stats {
     /** Whether all ants have finished their routes. */
-    pub completed: bool,
+    completed: bool,
     /** Final pheromone strengths for points in declaration order. */
-    pub pheromone_strengths: Box<[f64]>,
+    pheromone_strengths: Box<[f64]>,
     /** Ant's average route length. */
-    pub average_route_len: f64,
+    average_route_len: f64,
     /** Number of satiated ants for each cycle. */
-    pub ants_per_phase: Box<[usize]>,
+    ants_per_phase: Box<[usize]>,
     /** Average number of routes per ant. */
-    pub completed_routes: f64
+    completed_routes: f64
     }
 
 impl Stats {
+    /** Constructor. */
+    pub fn new<T>(ant_hill: &AntHill, world: &World, ants_per_phase: T) -> Self
+    where T: Into<Box<[usize]>> {
+        Self {
+            completed: ant_hill.has_all_ants_satiated(),
+            pheromone_strengths: world.pheromones_per_point(),
+            average_route_len: ant_hill.average_route_length(),
+            ants_per_phase: ants_per_phase.into(),
+            completed_routes: ant_hill.average_routes_count()
+            }
+        }
+
     /** `pheromone_per_route` getter. */
     pub fn pheromone_per_route(&self) -> Box<[f64]> {
         self.pheromone_strengths.iter()
             .map(|phero| phero / self.completed_routes)
             .collect()
+        }
+
+    /** Show operation for singular simulation. */
+    pub fn show(&self) {
+        println!(
+"o> --------- STATISTICS --------- <o
+|        all reached goal: {}
+|    pheromones per point: {}
+|    average route length: {}
+| satiated ants per phase: {}
+|  average routes per ant: {}
+|    pheromones per route: {}
+o> ------------------------------ <o",
+            self.completed,
+            self.pheromone_strengths.show_slice(),
+            self.average_route_len,
+            self.ants_per_phase.show_slice(),
+            self.completed_routes,
+            self.pheromone_per_route().show_slice()
+            );
         }
     }
 
@@ -400,24 +437,24 @@ impl Stats {
 #[derive(Debug, Clone)]
 pub struct AveragedStats {
     /** Number of times simulation was run. */
-    pub batch_size: usize,
+    batch_size: usize,
     /** Number of times all ants reached the food source. */
-    pub total_complete_routes: usize,
+    total_complete_routes: usize,
     /** Average amount of pheromones on each point. */
-    pub avg_pheromone_strengths: Box<[f64]>,
+    avg_pheromone_strengths: Box<[f64]>,
     /** Average ants' route length. */
-    pub avg_route_len: f64,
+    avg_route_len: f64,
     /** Average amount of satiated ants for each cycle. */
-    pub avg_ants_per_phase: Box<[f64]>,
+    avg_ants_per_phase: Box<[f64]>,
     /** Average number of routes per ant. */
-    pub avg_completed_routes: f64,
+    avg_completed_routes: f64,
     /** Average amount of pheromones on each point per average routes. */
-    pub avg_pheromone_per_route: Box<[f64]>,
+    avg_pheromone_per_route: Box<[f64]>,
     }
 
 impl AveragedStats {
     /** Constructor. */
-    pub fn new(stats: &[Stats], cycles: usize, number_of_points: usize) -> Self {
+    pub fn new(cycles: usize, number_of_points: usize, stats: &[Stats]) -> Self {
         let batch_size = stats.len();
         let batch = batch_size as f64;
 
@@ -469,5 +506,26 @@ impl AveragedStats {
             avg_pheromone_per_route: total_pheromone_per_route,
             avg_ants_per_phase
             }
+        }
+
+    /** Show operation for averages of a batch simulation. */
+    pub fn show(&self) {
+        println!(
+"o> ------ AVG STATS OF {:>3} ------ <o
+|  total completed routes: {}
+|    pheromones per point: {}
+|    average route length: {}
+| satiated ants per phase: {}
+|  average routes per ant: {}
+|    pheromones per route: {}
+o> ------------------------------ <o",
+            self.batch_size,
+            self.total_complete_routes,
+            self.avg_pheromone_strengths.show_slice(),
+            self.avg_route_len,
+            self.avg_ants_per_phase.show_slice(),
+            self.avg_completed_routes,
+            self.avg_pheromone_per_route.show_slice()
+            );
         }
     }
