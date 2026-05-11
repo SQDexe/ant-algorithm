@@ -258,11 +258,14 @@ impl Dispersion {
 
 /** **Technical part** - cycle action. */
 #[derive(Debug, Clone)]
-pub struct Action (
-    pub usize,
-    pub Id,
-    pub u32
-    );
+pub struct Action {
+    /** Cycle at which to make the action. */
+    pub cycle: usize,
+    /** Point ID at which to add the food. */
+    pub id: Id,
+    /** Amount of food to add. */
+    pub food_amount: u32
+    }
 
 /** **Technical part** - trait implementation for input parsing. */
 impl FromStr for Action {
@@ -279,7 +282,7 @@ impl FromStr for Action {
             };
 
         /* Try parsing main elements */
-        let (cycle, id, food) = (
+        let (cycle, id, food_amount) = (
             str_cycle.parse()
                 .map_err(|_| ParseActionError::FailedParseCycle)?,
             str_id.parse()
@@ -289,7 +292,7 @@ impl FromStr for Action {
             );
 
         /* Create action */
-        Ok(Self(cycle, id, food))
+        Ok(Self { cycle, id, food_amount })
         }
     }
 

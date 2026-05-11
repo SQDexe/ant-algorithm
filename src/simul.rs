@@ -133,10 +133,10 @@ impl Simulator {
         let mut tmp: HashMap<_, Vec<_>, _> = HashMap::with_capacity_and_hasher(cycles, FxBuildHasher);
 
         /* Fill the temporary map */
-        for Action(cycle, id, amount) in actions {
+        for Action { cycle, id, food_amount} in actions {
             tmp.entry(cycle)
                 .or_default()
-                .push((id, amount))
+                .push((id, food_amount))
             }
 
         /* Rebuild into final file */
