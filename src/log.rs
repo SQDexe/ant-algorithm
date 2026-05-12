@@ -64,7 +64,7 @@ pub fn log(level: LogLevel, msg: Arguments<'_>) {
 #[macro_export]
 macro_rules! info {
     ($($arg:tt)*) => {
-        $crate::log::log($crate::log::LogLevel::Info, format_args!($($arg)*))
+        $crate::log::log($crate::log::LogLevel::Info, ::core::format_args!($($arg)*))
         };
     }
 
@@ -72,7 +72,7 @@ macro_rules! info {
 #[macro_export]
 macro_rules! warning {
     ($($arg:tt)*) => {
-        $crate::log::log($crate::log::LogLevel::Warning, format_args!($($arg)*))
+        $crate::log::log($crate::log::LogLevel::Warning, ::core::format_args!($($arg)*))
         };
     }
 
@@ -80,7 +80,7 @@ macro_rules! warning {
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {
-        $crate::log::log($crate::log::LogLevel::Error, format_args!($($arg)*))
+        $crate::log::log($crate::log::LogLevel::Error, ::core::format_args!($($arg)*))
         };
     }
 
@@ -88,6 +88,6 @@ macro_rules! error {
 #[macro_export]
 macro_rules! critical {
     ($($arg:tt)*) => {
-        $crate::log::log($crate::log::LogLevel::Critical, format_args!($($arg)*))
+        $crate::log::log($crate::log::LogLevel::Critical, ::core::format_args!($($arg)*))
         };
     }
