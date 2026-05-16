@@ -1,11 +1,10 @@
 use {
-    std::env::var,
     winapi::um::winnt::LANG_ENGLISH,
     winresource::WindowsResource,
     };
 
 fn main() {
-    if Ok("windows") == var("CARGO_CFG_TARGET_OS").as_deref() {
+    if cfg!(target_os = "windows") {
         WindowsResource::new()
             .set_icon("./assets/icon.ico")
             .set_language(LANG_ENGLISH)
