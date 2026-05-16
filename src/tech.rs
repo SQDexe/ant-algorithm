@@ -486,10 +486,8 @@ impl AveragedStats {
             }
 
         /* Average out the totals */
-        for strength in &mut total_pheromone_strengths {
+        for (strength, avg_strength) in zip(&mut total_pheromone_strengths, &mut total_pheromone_per_route) {
             *strength /= batch;
-            }
-        for avg_strength in &mut total_pheromone_per_route {
             *avg_strength /= batch;
             }
         let avg_ants_per_phase = total_ants_per_phase.into_iter()
