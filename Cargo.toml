@@ -2,7 +2,7 @@
 name = "ant-algorithm"
 version = "1.6.6"
 edition = "2024"
-description = "A Rust reimplementation of Generic Ant Algorithm"
+description = "Rust reimplementation of Generic Ant Algorithm"
 authors = ["SQD.exe"]
 repository = "https://github.com/SQDexe/ant-algorithm"
 readme = "README.md"

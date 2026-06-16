@@ -7,7 +7,7 @@ use {
 
 
 fn main() {
-    if let Ok("windows") = var("CARGO_CFG_TARGET_OS").as_deref() {
+    if var("CARGO_CFG_TARGET_OS").is_ok_and(|e| e == "windows") {
         WindowsResource::new()
             .set_icon_with_id("./assets/icon.ico", "APP_ICON")
             .set_language(LANG_ENGLISH)
