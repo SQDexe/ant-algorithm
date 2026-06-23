@@ -154,12 +154,7 @@ impl Simulator {
             let mut ants_per_phase = Vec::with_capacity(self.config.cycles);
 
             /* Print information, if applicable */
-            if self.logs {
-                println!("o>====== BEGINNING ======<o");
-                self.ant_hill.show();
-                self.world.show();
-                println!("o>=======================<o\n");
-                }
+            self.show_phase(None);
 
             /* Begin the simulation */
             for phase in 0 .. self.config.cycles {
@@ -180,12 +175,7 @@ impl Simulator {
                 ants_per_phase.push(self.ant_hill.satiated_ants_count());
 
                 /* Print information, if applicable */
-                if self.logs {
-                    println!("o>======  PHASE {:>2} ======<o", phase + 1);
-                    self.ant_hill.show();
-                    self.world.show();
-                    println!("o>=======================<o\n");
-                    }
+                self.show_phase(Some(phase));
                 }
 
             /* Gather final statistics */
@@ -214,6 +204,25 @@ impl Simulator {
                     many
                     ).show()
             }
+        }
+
+    /** Show the simulation's phase statistics, based on phase number. */
+    fn show_phase(&self, phase: Option<usize>) {
+        if ! self.logs {
+            return;
+            }
+
+        /* Show correct banner */
+        if let Some(phase) = phase.and_then(|phase_num| phase_num.checked_add(1)) {
+            println!("o>======  PHASE {:>2} ======<o", phase);
+        } else {
+            println!("o>====== BEGINNING ======<o");
+            }
+        
+        /* Show phase stats */
+        self.ant_hill.show();
+        self.world.show();
+        println!("o>=======================<o\n");
         }
 
     /** Show the simulation's summary. */
