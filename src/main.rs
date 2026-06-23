@@ -36,7 +36,10 @@ use {
             Instant,
             Duration
             },
-        process::ExitCode
+        process::{
+            ExitCode,
+            Termination
+            }
         },
     crate::{
         args::Args,
@@ -125,11 +128,13 @@ fn main() -> ExitCode {
     #[cfg(not(debug_assertions))]
     set_hook(Box::new(panic_hook));
 
+    /* Run the program */
+    let result = run();
+
     /* Catch any error back, and report them */
-    if let Err(err) = run() {
+    if let Err(ref err) = result {
         error!("{err}");
-        return ExitCode::FAILURE;
         }
 
-    ExitCode::SUCCESS
+    result.map_or(ExitCode::FAILURE, |_| ExitCode::SUCCESS)
     }
