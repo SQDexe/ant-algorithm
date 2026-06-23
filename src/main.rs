@@ -27,10 +27,7 @@ use {
             Instant,
             Duration
             },
-        process::{
-            ExitCode,
-            Termination
-            }
+        process::ExitCode
         },
     crate::{
         args::Args,
