@@ -1,3 +1,5 @@
+/*! **Technical module** - grouping of other important structures. */
+
 #![allow(dead_code)]
 
 use {

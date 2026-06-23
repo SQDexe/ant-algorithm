@@ -1,3 +1,5 @@
+/*! **Technical module** - main simulation managment. */
+
 use {
     rustc_hash::FxBuildHasher,
     serde_json::{

@@ -7,24 +7,15 @@ A university project - an implementation of Ant Colony Optimisation Alogrithm, p
 Based on `Klasyczny algorytm mrówkowy v.2.0` by Feliks Kurp
 */
 
-/** **Logic module** - ants managment and logic. */
 mod anthill;
-/** **Logic module** - world space managment. */
 mod world;
-/** **Logic module** - grouping of other important structures. */
 mod utils;
 
-/** **Technical module** - CLI arguments declaration, and parsing. */
 mod args;
-/** **Technical module** - important constants. */
 mod consts;
-/** **Technical module** - application's errors. */
 mod error;
-/** **Technical module** - application's logging functionality. */
 mod log;
-/** **Technical module** - main simulation managment. */
 mod simul;
-/** **Technical module** - grouping of other important structures. */
 mod tech;
 
 

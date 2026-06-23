@@ -1,3 +1,5 @@
+/*! **Logic module** - ants managment and logic. */
+
 use {
     core::{
         fmt::Write,

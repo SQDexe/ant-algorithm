@@ -1,3 +1,5 @@
+/*! **Logic module** - world space managment. */
+
 use {
     arrayvec::ArrayVec,
     rustc_hash::FxBuildHasher,

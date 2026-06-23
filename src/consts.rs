@@ -1,3 +1,5 @@
+/*! **Technical module** - important constants. */
+
 #![allow(dead_code)]
 
 /** Default simulation settings. */

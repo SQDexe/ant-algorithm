@@ -1,3 +1,5 @@
+/*! **Logic module** - grouping of other important structures. */
+
 use {
     core::str::FromStr,
     crate::{

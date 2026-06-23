@@ -1,3 +1,5 @@
+/*! **Technical module** - application's logging functionality. */
+
 use {
     core::fmt::Arguments,
     console::{

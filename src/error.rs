@@ -1,3 +1,5 @@
+/*! **Technical module** - application's errors. */
+
 use {
     serde_json::Error as SerdeError,
     thiserror::Error,

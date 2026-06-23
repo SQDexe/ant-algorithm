@@ -1,3 +1,5 @@
+/*! **Technical module** - CLI arguments declaration, and parsing. */
+
 use {
     clap::{
         value_parser,
