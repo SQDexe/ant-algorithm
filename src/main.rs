@@ -31,6 +31,7 @@ use {
             },
         process::ExitCode
         },
+    sqds_tools::ResolveExitCode,
     crate::{
         args::Args,
         error::RuntimeError,
@@ -126,5 +127,5 @@ fn main() -> ExitCode {
         error!("{err}");
         }
 
-    result.map_or(ExitCode::FAILURE, |_| ExitCode::SUCCESS)
+    result.resolve()
     }
