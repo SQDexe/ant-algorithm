@@ -7,10 +7,12 @@ A university project - an implementation of Ant Colony Optimisation Alogrithm, p
 Based on `Klasyczny algorytm mrówkowy v.2.0` by Feliks Kurp
 */
 
+/* Logic modules */
 mod anthill;
 mod world;
 mod utils;
 
+/* Technical modules */
 mod args;
 mod consts;
 mod error;
